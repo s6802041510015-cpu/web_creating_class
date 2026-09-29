@@ -11,9 +11,9 @@ export function HeroSection() {
           <Sparkles size={15} /> LEARN • TRY • BUILD
         </span>
         <h1 id="hero-title">
-          เรียน HTML แบบลงมือทำ
+          21901-2002
           <br />
-          <span>จนสร้างเว็บไซต์ของตัวเองได้จริง</span>
+          <span>วิชา การสร้างเว็บไซต์</span>
         </h1>
         <p>เรียนรู้แนวคิด ทดลองเขียนโค้ด และสร้างหน้าเว็บด้วยตัวเองทีละขั้น</p>
         <Button to="/lessons/00">
