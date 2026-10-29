@@ -12,8 +12,10 @@ import { lessons } from "../data/lessons";
 import type { AssessmentKind, AssessmentResult } from "../data/types";
 import { useLessonProgress } from "../state/LessonProgress";
 import { readCodeLabCompletedCount, readWorkshopSummary, workshopFiles } from "../state/StudentWork";
+import { useStudentSync } from "../state/StudentProgressSync";
 
 export function ProgressPage({ results }: { results: Partial<Record<AssessmentKind, AssessmentResult>> }) {
+  const { status } = useStudentSync();
   const { completedIds } = useLessonProgress();
   const completedCount = lessons.filter((lesson) => completedIds.includes(lesson.id)).length;
   const codeLabCount = readCodeLabCompletedCount();
@@ -56,7 +58,7 @@ export function ProgressPage({ results }: { results: Partial<Record<AssessmentKi
           </div>
         ))}
       </div>
-      <p className="supporting-note">ข้อมูลในหน้านี้บันทึกไว้ในเบราว์เซอร์เครื่องนี้ ยังไม่ซิงก์ข้ามอุปกรณ์</p>
+      <p className="supporting-note">{status === "synced" ? "บทเรียน คะแนน และสถานะแบบฝึกซิงก์กับ Google Sheets แล้ว โค้ดร่างยังอยู่เฉพาะอุปกรณ์นี้" : status === "syncing" ? "กำลังซิงก์ความก้าวหน้ากับ Google Sheets..." : "ข้อมูลในหน้านี้บันทึกไว้ในเบราว์เซอร์เครื่องนี้ ยังไม่ซิงก์ข้ามอุปกรณ์"}</p>
     </div>
   );
 }

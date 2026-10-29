@@ -1,0 +1,11 @@
+.student-sync-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--bg-primary); }
+.student-sync-gate__card { width: min(100%, 520px); padding: clamp(24px, 5vw, 40px); border: 1px solid var(--border-soft); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-soft); text-align: center; }
+.student-sync-gate__card > svg { color: var(--cyan); }
+.student-sync-gate__card h1 { margin: 14px 0 10px; font-size: 25px; }
+.student-sync-gate__card p { color: var(--text-secondary); }
+.student-sync-gate__card .button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 10px; }
+.student-sync-spin { vertical-align: middle; animation: student-sync-spin 1s linear infinite; }
+.student-sync-alert { position: fixed; z-index: 80; left: 16px; bottom: 16px; display: flex; align-items: center; gap: 9px; max-width: min(440px, calc(100vw - 32px)); padding: 12px 15px; border: 1px solid rgba(251, 191, 36, .5); border-radius: 12px; background: var(--surface-elevated); color: var(--text-primary); box-shadow: var(--shadow-soft); font-size: 13px; }
+.student-sync-alert button { flex: none; border: 0; background: none; color: var(--cyan); font-weight: 700; }
+@keyframes student-sync-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .student-sync-spin { animation: none; } }

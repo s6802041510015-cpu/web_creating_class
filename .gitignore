@@ -1,5 +1,7 @@
 node_modules
 dist
 *.local
+*service-account*.json
+*credentials*.json
 *.tsbuildinfo
 .DS_Store

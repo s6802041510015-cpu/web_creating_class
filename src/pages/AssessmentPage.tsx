@@ -9,6 +9,7 @@ import {
 import { lessons, objectives } from "../data/lessons";
 import type { AssessmentKind, AssessmentResult, Choice } from "../data/types";
 import { useLessonProgress } from "../state/LessonProgress";
+import { useStudentSync } from "../state/StudentProgressSync";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function AssessmentPage({ initialKind, results, onResult }: Props) {
+  const { status } = useStudentSync();
   const { completedIds } = useLessonProgress();
   const missingLessons = lessons.filter((lesson) => !completedIds.includes(lesson.id));
   const hasPreTest = Boolean(results.pre);
@@ -198,7 +200,7 @@ export function AssessmentPage({ initialKind, results, onResult }: Props) {
           </button>
         </div>
         <p className="supporting-note">
-          ผลนี้บันทึกไว้ในเบราว์เซอร์ของอุปกรณ์นี้
+          {status === "synced" ? "ผลแบบทดสอบซิงก์กับ Google Sheets แล้ว" : status === "syncing" ? "กำลังบันทึกผลแบบทดสอบ..." : "ผลนี้บันทึกไว้ในเบราว์เซอร์ของอุปกรณ์นี้"}
         </p>
       </div>
     );

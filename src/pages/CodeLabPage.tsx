@@ -6,13 +6,15 @@ import { Button } from "../components/ui/Button";
 import { PageHeader } from "../components/ui/PageHeader";
 import { checkPractice, codeLabPractices, type CheckResult, type PracticeId } from "../data/codeLabPractices";
 import { codeLabStorageKey } from "../state/StudentWork";
+import { getStudentItem, setStudentItem } from "../state/StudentStorage";
 import { useTutorPage } from "../state/TutorPage";
+import { useStudentSync } from "../state/StudentProgressSync";
 
 type LabState = { drafts: Partial<Record<PracticeId, string>>; completed: PracticeId[] };
 
 function readLabState(): LabState {
   try {
-    const saved = JSON.parse(window.localStorage.getItem(codeLabStorageKey) ?? "null") as Partial<LabState> | null;
+    const saved = JSON.parse(getStudentItem(codeLabStorageKey) ?? "null") as Partial<LabState> | null;
     const ids = codeLabPractices.map((item) => item.id);
     const drafts: LabState["drafts"] = {};
     for (const id of ids) {
@@ -42,6 +44,7 @@ function ExpectedPreview({ id }: { id: PracticeId }) {
 }
 
 export function CodeLabPage() {
+  const { status } = useStudentSync();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedId = searchParams.get("practice");
   const practiceIndex = codeLabPractices.findIndex((item) => item.id === requestedId);
@@ -62,7 +65,7 @@ export function CodeLabPage() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(codeLabStorageKey, JSON.stringify(labState));
+      setStudentItem(codeLabStorageKey, JSON.stringify(labState));
     } catch {
       // The editor remains usable when browser storage is unavailable.
     }
@@ -108,7 +111,7 @@ export function CodeLabPage() {
       />
       <div className="code-lab-progress" aria-live="polite">
         <span>ทำผ่านแล้ว {labState.completed.length}/{codeLabPractices.length} หัวข้อ</span>
-        <span>โค้ดของคุณบันทึกในเบราว์เซอร์นี้อัตโนมัติ</span>
+        <span>{status === "synced" ? "ผลการฝึกซิงก์แล้ว · โค้ดร่างอยู่ในเครื่องนี้" : "โค้ดของคุณบันทึกในเบราว์เซอร์นี้อัตโนมัติ"}</span>
       </div>
       <div className="practice-strip" aria-label="หัวข้อฝึกฝน">
         {codeLabPractices.map((item, itemIndex) => (

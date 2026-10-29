@@ -15,54 +15,20 @@ import { LessonProgressProvider } from "./state/LessonProgress";
 import { ThemeProvider } from "./state/Theme";
 import { TutorPageProvider } from "./state/TutorPage";
 import { LineAuthProvider } from "./state/LineAuth";
+import { StudentProgressSync } from "./state/StudentProgressSync";
 import type { AssessmentKind, AssessmentResult } from "./data/types";
-import { assessmentQuestions } from "./data/assessment";
+import { readAssessmentResults } from "./state/ProgressData";
+import { assessmentStorageKey, setStudentItem } from "./state/StudentStorage";
 
 const Cell3DDemoPage = lazy(() => import("./pages/Cell3DDemoPage").then((module) => ({ default: module.Cell3DDemoPage })));
-const assessmentStorageKey = "webquest-assessment-results-v1";
 
-function readAssessmentResults(): Partial<Record<AssessmentKind, AssessmentResult>> {
-  try {
-    const saved: unknown = JSON.parse(localStorage.getItem(assessmentStorageKey) ?? "{}");
-    if (!saved || typeof saved !== "object") return {};
-
-    const stored = saved as Record<string, unknown>;
-    const results: Partial<Record<AssessmentKind, AssessmentResult>> = {};
-    for (const kind of ["pre", "post"] as const) {
-      const value = stored[kind];
-      if (!value || typeof value !== "object") continue;
-      const result = value as Partial<AssessmentResult>;
-      const total = assessmentQuestions[kind].length;
-      const score = result.score;
-      if (
-        result.kind === kind &&
-        result.total === total &&
-        typeof score === "number" &&
-        Number.isInteger(score) &&
-        score >= 0 &&
-        score <= total &&
-        result.breakdown &&
-        [1, 2, 3, 4].every((id) => {
-          const objectiveScore = result.breakdown?.[id as 1 | 2 | 3 | 4];
-          return typeof objectiveScore === "number" && Number.isInteger(objectiveScore) && objectiveScore >= 0 && objectiveScore <= 3;
-        })
-      ) {
-        results[kind] = result as AssessmentResult;
-      }
-    }
-    return results;
-  } catch {
-    return {};
-  }
-}
-
-export default function App() {
+function LearningApp() {
   const [results, setResults] = useState<
     Partial<Record<AssessmentKind, AssessmentResult>>
   >(readAssessmentResults);
   useEffect(() => {
     try {
-      localStorage.setItem(assessmentStorageKey, JSON.stringify(results));
+      setStudentItem(assessmentStorageKey, JSON.stringify(results));
     } catch {
       // Assessment remains usable when browser storage is unavailable.
     }
@@ -70,10 +36,6 @@ export default function App() {
   const handleResult = (result: AssessmentResult) =>
     setResults((previous) => ({ ...previous, [result.kind]: result }));
   return (
-    <ThemeProvider>
-    <LineAuthProvider>
-    <LessonProgressProvider>
-    <TutorPageProvider>
       <Routes>
       <Route path="cell-3d" element={<Suspense fallback={null}><Cell3DDemoPage /></Suspense>} />
       <Route element={<AppLayout />}>
@@ -102,9 +64,9 @@ export default function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       </Routes>
-    </TutorPageProvider>
-    </LessonProgressProvider>
-    </LineAuthProvider>
-    </ThemeProvider>
   );
+}
+
+export default function App() {
+  return <ThemeProvider><LineAuthProvider><StudentProgressSync><LessonProgressProvider><TutorPageProvider><LearningApp /></TutorPageProvider></LessonProgressProvider></StudentProgressSync></LineAuthProvider></ThemeProvider>;
 }

@@ -8,9 +8,12 @@ import {
   projectWorkflow,
 } from "../data/finalProject";
 import { readWorkshopDraft, workshopFiles, workshopStorageKey } from "../state/StudentWork";
+import { setStudentItem } from "../state/StudentStorage";
 import { useTutorPage } from "../state/TutorPage";
+import { useStudentSync } from "../state/StudentProgressSync";
 
 export function WorkshopPage() {
+  const { status } = useStudentSync();
   const [savedDraft] = useState(readWorkshopDraft);
   const [activePage, setActivePage] = useState(savedDraft.activePage);
   const [activeStep, setActiveStep] = useState(savedDraft.activeStep);
@@ -22,7 +25,7 @@ export function WorkshopPage() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(workshopStorageKey, JSON.stringify({
+      setStudentItem(workshopStorageKey, JSON.stringify({
         codes, checked: [...checked], activePage, activeStep,
       }));
     } catch {
@@ -209,7 +212,7 @@ export function WorkshopPage() {
         </div>
         <p className="supporting-note">
           Checklist นี้สำหรับตรวจด้วยตนเอง
-          ระบบบันทึกโค้ดและรายการตรวจในเบราว์เซอร์นี้อัตโนมัติ ยังไม่มีการให้คะแนน
+          {status === "synced" ? "รายการตรวจซิงก์แล้ว · โค้ดร่างบันทึกในเครื่องนี้ · ยังไม่มีการให้คะแนน" : "ระบบบันทึกโค้ดและรายการตรวจในเบราว์เซอร์นี้อัตโนมัติ ยังไม่มีการให้คะแนน"}
         </p>
       </section>
     </div>

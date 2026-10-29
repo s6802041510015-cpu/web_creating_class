@@ -1,0 +1,57 @@
+import test, { mock } from "node:test";
+import assert from "node:assert/strict";
+import { JWT } from "google-auth-library";
+import progressApi from "../api/progress.mjs";
+import { normalizeProgress } from "../lib/progress-schema.mjs";
+import { writeProgress } from "../lib/google-sheets.mjs";
+
+const userId = `U${"a".repeat(32)}`;
+const empty = { version: 1, completedLessons: [], assessments: { pre: null, post: null }, codeLabCompleted: [], workshopChecked: [] };
+
+test("progress schema keeps known IDs and rejects a post-test without prerequisites", () => {
+  assert.deepEqual(normalizeProgress({ ...empty, completedLessons: ["00", "00", "fake"], codeLabCompleted: ["heading", "unknown"] }), {
+    ...empty, completedLessons: ["00"], codeLabCompleted: ["heading"],
+  });
+  const result = { kind: "post", score: 0, total: 12, breakdown: { 1: 0, 2: 0, 3: 0, 4: 0 } };
+  assert.throws(() => normalizeProgress({ ...empty, assessments: { ...empty.assessments, post: result } }), /prerequisites/);
+});
+
+test("progress API rejects unknown origins and reports missing Sheets setup", async () => {
+  const blocked = await progressApi.fetch(new Request("https://api.example.com/api/progress", { headers: { Origin: "https://other.example" } }));
+  assert.equal(blocked.status, 403);
+  const missing = await progressApi.fetch(new Request("https://api.example.com/api/progress", { headers: { Origin: "https://s6802041510015-cpu.github.io" } }));
+  assert.equal(missing.status, 503);
+});
+
+test("Google Sheets update preserves a teacher-assigned class and uses RAW values", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousId = process.env.GOOGLE_SHEET_ID;
+  const previousCredentials = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  process.env.GOOGLE_SHEET_ID = "testspreadsheetid0123456789";
+  process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({ client_email: "robot@example.iam.gserviceaccount.com", private_key: "test" });
+  mock.method(JWT.prototype, "getAccessToken", async () => ({ token: "test-token" }));
+  let update;
+  globalThis.fetch = async (url, options = {}) => {
+    const path = String(url);
+    if (options.method === "PUT") { update = { url: path, options }; return Response.json({ updatedRows: 1 }); }
+    if (path.includes("fields=sheets.properties.title")) return Response.json({ sheets: [{ properties: { title: "Students" } }] });
+    if (path.includes("A1%3AK1")) return Response.json({ values: [["LINE User ID"]] });
+    if (path.includes("A2%3AK")) return Response.json({ values: [[userId, "Old name", "ปวช.1/1", "", "", 0, "", 0, 0, "", JSON.stringify(empty)]] });
+    throw new Error(`Unexpected request: ${path}`);
+  };
+  try {
+    await writeProgress({ userId, displayName: "New name" }, { ...empty, completedLessons: ["00"] });
+    assert.match(update.url, /valueInputOption=RAW/);
+    const row = JSON.parse(update.options.body).values[0];
+    assert.equal(row[0], userId);
+    assert.equal(row[1], "New name");
+    assert.equal(row[2], "ปวช.1/1");
+    assert.equal(row[5], 1);
+    assert.equal(update.options.headers.Authorization, "Bearer test-token");
+  } finally {
+    globalThis.fetch = previousFetch;
+    mock.restoreAll();
+    if (previousId === undefined) delete process.env.GOOGLE_SHEET_ID; else process.env.GOOGLE_SHEET_ID = previousId;
+    if (previousCredentials === undefined) delete process.env.GOOGLE_SERVICE_ACCOUNT_JSON; else process.env.GOOGLE_SERVICE_ACCOUNT_JSON = previousCredentials;
+  }
+});

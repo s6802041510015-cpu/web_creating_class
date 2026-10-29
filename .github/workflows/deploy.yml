@@ -40,6 +40,7 @@ jobs:
         env:
           VITE_AI_API_URL: ${{ vars.VITE_AI_API_URL }}
           VITE_LIFF_ID: ${{ vars.VITE_LIFF_ID }}
+          VITE_PROGRESS_SYNC_ENABLED: ${{ vars.VITE_PROGRESS_SYNC_ENABLED }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v6

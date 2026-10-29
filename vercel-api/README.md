@@ -1,19 +1,31 @@
-# WebQuest API
+# WebQuest API และข้อมูลความก้าวหน้า
 
-โปรเจกต์ Vercel นี้ให้บริการ `/api/chat` และ `/api/auth/line` เว็บบทเรียนยังอยู่บน GitHub Pages
+เว็บนักเรียนอยู่บน GitHub Pages ส่วน Vercel project นี้ (`vercel-api`) ให้บริการ `/api/chat`, `/api/auth/line` และ `/api/progress` โดย API ตรวจ LINE ID token กับ LINE ก่อนอ่านหรือเขียนข้อมูลของผู้เรียนแต่ละคน
 
-1. Push โฟลเดอร์ `vercel-api` ขึ้น repository `web_creating_class`.
-2. ใน Vercel เลือก **Create New → Project** และ import repository นี้.
-3. ตั้ง **Root Directory** เป็น `vercel-api` และชื่อโปรเจกต์ที่ต้องการ เช่น `webclass-ai`.
-4. เพิ่ม Environment Variable `LINE_CHANNEL_ID=2012268768` ใน Production. ไม่ต้องใช้ Channel Secret สำหรับการตรวจ ID token แบบนี้. หากต้องการใช้ AI chat ด้วย ให้เพิ่ม `GEMINI_API_KEY` จาก Google AI Studio เฉพาะใน Vercel; อย่าใส่ key ใน Git หรือ Vite.
-5. Deploy แล้วคัดลอก origin เช่น `https://webclass-ai.vercel.app` (ไม่มี `/api/chat`).
-6. ที่ GitHub repository `web_creating_class` เพิ่ม **Settings → Secrets and variables → Actions → Variables** ชื่อ `VITE_AI_API_URL` โดยใส่ origin นี้ (ไม่มี `/api/chat`). เพิ่ม `VITE_LIFF_ID=2012268768-BPIlGmOb`. GitHub Pages workflow จะส่งสองค่านี้ให้ Vite ตอน build.
-7. สำหรับ localhost ให้สร้าง `.env.local` ที่ root ของเว็บด้วย `VITE_AI_API_URL=https://...vercel.app` และยังไม่ต้องใส่ `VITE_LIFF_ID` เพื่อใช้โหมดทดลอง. การทดสอบ LINE Login จริงให้ทำที่ GitHub Pages หลัง deploy; หากต้องทดสอบจากเครื่อง ต้องมี HTTPS tunnel และตั้ง Endpoint URL ของ LIFF สำหรับ URL นั้น.
+## ตั้งค่า Google Sheets (ทำครั้งเดียว)
 
-ใน LINE Developers ให้ LIFF app มี Endpoint URL เป็น `https://s6802041510015-cpu.github.io/web_creating_class/` และเปิด scopes `openid` กับ `profile` (`profile` ใช้แสดงชื่อผู้เรียน). URL ใน LINE OA rich menu ของแอปนี้คือ `https://liff.line.me/2012268768-BPIlGmOb`.
+1. สร้าง Google Sheet ใหม่ด้วยบัญชีของครู ตั้งชื่อเช่น `ความก้าวหน้า วิชาการสร้างเว็บไซต์` เก็บลิงก์ไว้เฉพาะผู้มีสิทธิ์ดูข้อมูลนักเรียน คัดลอก **Spreadsheet ID** ซึ่งอยู่ระหว่าง `/d/` และ `/edit` ใน URL
+2. ใน [Google Cloud Console](https://console.cloud.google.com/) สร้างหรือเลือกโปรเจกต์สำหรับเว็บวิชานี้ ไปที่ **APIs & Services → Library** แล้วเปิด **Google Sheets API**
+3. ไปที่ **IAM & Admin → Service Accounts → Create service account** สร้างบัญชีบริการสำหรับการบันทึกความก้าวหน้า ไม่จำเป็นต้องให้สิทธิ์ IAM ระดับโปรเจกต์กับบัญชีบริการนี้ จากหน้า Service account ไปที่ **Keys → Add key → Create new key → JSON** แล้วเก็บไฟล์ที่ดาวน์โหลดไว้เป็นความลับ
+4. เปิด Sheet จากข้อ 1 กด **Share** แล้วเพิ่ม `client_email` ที่อยู่ในไฟล์ JSON เป็น **Editor** วิธีนี้ให้ API เข้าถึงเฉพาะ Sheet ที่แชร์
+5. ที่ Vercel project ของ API (โดเมน `https://htmlwebclass-one.vercel.app`) ไปที่ **Settings → Environment Variables** เพิ่มค่าต่อไปนี้สำหรับ **Production**:
 
-หลังตั้งค่า `LINE_CHANNEL_ID` ใน Vercel ให้ redeploy API. หลังตั้งค่า GitHub Actions variables ให้ build/deploy เว็บใหม่เพื่อให้ค่าฝั่ง Vite มีผล. อย่านำ ID token หรือ Channel Secret ไปบันทึกใน repository. ID token ถูกส่งไป Vercel เพื่อตรวจสอบกับ LINE และไม่เก็บใน localStorage.
+   - `GOOGLE_SHEET_ID` = Spreadsheet ID จากข้อ 1
+   - `GOOGLE_SERVICE_ACCOUNT_JSON` = เนื้อหาทั้งหมดของไฟล์ JSON จากข้อ 3 (เก็บเป็น Secret/Sensitive ถ้า UI มีตัวเลือกนี้)
+   - `LINE_CHANNEL_ID` = `2012268768` (ควรมีอยู่แล้ว)
 
-ขณะนี้ LINE Login ยืนยันตัวผู้เรียนและแสดงชื่อเท่านั้น ความก้าวหน้าและแบบทดสอบยังอยู่ใน localStorage ของเบราว์เซอร์ ยังไม่เชื่อม Google Sheets หรือแยกข้อมูลผู้เรียนตาม LINE user ID.
+6. **Redeploy** Vercel เพื่อให้ environment variables ใหม่มีผล ไม่ต้องส่งไฟล์ JSON, private key หรือ LINE ID token ในแชทหรืออัปโหลดเข้า GitHub
+7. ที่ GitHub repository ไปที่ **Settings → Secrets and variables → Actions → Variables** เพิ่ม `VITE_PROGRESS_SYNC_ENABLED` ค่า `true` แล้วสั่งรัน **Actions → Deploy to GitHub Pages → Run workflow** อีกครั้ง ค่านี้เป็นเพียงสวิตช์เปิดฟีเจอร์ฝั่งเว็บ เปิดหลัง API ใช้งานได้แล้วเท่านั้น
 
-ค่า `WEB_ORIGIN` เพิ่มได้ถ้าเว็บเปลี่ยนโดเมน โดยใส่ origin เต็ม เช่น `https://example.com` (หลายค่าใช้ comma คั่น). ค่าเริ่มต้นรองรับ `https://s6802041510015-cpu.github.io` และ localhost. `GEMINI_MODEL` เป็นตัวเลือกเสริม ค่าเริ่มต้นคือ `gemini-3.6-flash`.
+เมื่อผู้เรียนเปิดเว็บผ่าน LIFF ครั้งแรก ระบบจะขอความยินยอมก่อนบันทึกชื่อ LINE และความก้าวหน้าลง Sheet ถ้ามีข้อมูลเดิมในเครื่องจะเลือกนำเข้าได้ ระบบสร้างแท็บ `Students` และหัวคอลัมน์ให้เอง ครูแก้คอลัมน์ **ห้องเรียน** ได้โดยตรง ข้อมูลบทเรียน คะแนน และสถานะ Code Lab/Workshop ซิงก์ตาม LINE user ID; โค้ดร่างของผู้เรียนเก็บเฉพาะในเครื่อง การเริ่มใช้บนอุปกรณ์ใหม่จะโหลดข้อมูลที่ซิงก์ไว้หลังล็อกอิน LINE
+
+หาก Google Sheets ใช้งานไม่ได้ เว็บยังบันทึกข้อมูลในเครื่องและแสดงปุ่มให้ลองซิงก์อีกครั้ง **อย่าลบข้อมูลเว็บไซต์จากเบราว์เซอร์ก่อนซิงก์สำเร็จ** ค่า `VITE_PROGRESS_SYNC_ENABLED` เริ่มต้นเป็น `false` เพื่อให้เว็บเดิมทำงานได้ระหว่างตั้งค่า Google
+
+## ค่าอื่นที่ใช้เดิม
+
+- `GEMINI_API_KEY` ใส่เฉพาะใน Vercel หากต้องการใช้ AI chat
+- `WEB_ORIGIN` ใช้เมื่อเว็บย้ายโดเมน (ใส่ origin เต็ม หลายค่าใช้ comma คั่น) ค่าเริ่มต้นรองรับ `https://s6802041510015-cpu.github.io` และ localhost
+- `GEMINI_MODEL` เป็นตัวเลือกเสริม
+- ที่ GitHub Actions Variables คง `VITE_AI_API_URL=https://htmlwebclass-one.vercel.app` และ `VITE_LIFF_ID=2012268768-BPIlGmOb`
+
+LINE Developers ต้องตั้ง LIFF Endpoint URL เป็น `https://s6802041510015-cpu.github.io/web_creating_class/` และเปิด scopes `openid`, `profile` ลิงก์ LINE OA rich menu คือ `https://liff.line.me/2012268768-BPIlGmOb`

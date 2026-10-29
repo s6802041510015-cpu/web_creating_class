@@ -8,9 +8,11 @@ type LineUser = { userId: string; displayName: string };
 type LineAuthState = {
   user: LineUser | null;
   isDemo: boolean;
+  getIdToken: () => Promise<string | null>;
 };
 
-const LineAuthContext = createContext<LineAuthState>({ user: null, isDemo: true });
+const getIdToken = async () => liffId ? (await initializeLiff()).getIDToken() : null;
+const LineAuthContext = createContext<LineAuthState>({ user: null, isDemo: true, getIdToken });
 const liffId = (import.meta.env.VITE_LIFF_ID ?? "").trim();
 const apiOrigin = (import.meta.env.VITE_AI_API_URL ?? "").trim().replace(/\/+$/, "");
 let liffInit: Promise<typeof liff> | null = null;
@@ -81,10 +83,10 @@ export function LineAuthProvider({ children }: { children: ReactNode }) {
   }, [attempt]);
 
   if (!liffId) {
-    return <LineAuthContext.Provider value={{ user: null, isDemo: true }}>{children}</LineAuthContext.Provider>;
+    return <LineAuthContext.Provider value={{ user: null, isDemo: true, getIdToken }}>{children}</LineAuthContext.Provider>;
   }
   if (user) {
-    return <LineAuthContext.Provider value={{ user, isDemo: false }}>{children}</LineAuthContext.Provider>;
+    return <LineAuthContext.Provider value={{ user, isDemo: false, getIdToken }}>{children}</LineAuthContext.Provider>;
   }
 
   return (
