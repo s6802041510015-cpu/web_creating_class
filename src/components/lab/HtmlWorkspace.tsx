@@ -7,7 +7,7 @@ type Props = {
   fileName: string;
   onReset?: () => void;
   onInternalLink?: (fileName: string) => boolean;
-  hint?: boolean;
+  hints?: string[];
 };
 
 export function HtmlWorkspace({
@@ -16,12 +16,12 @@ export function HtmlWorkspace({
   fileName,
   onReset,
   onInternalLink,
-  hint = false,
+  hints = [],
 }: Props) {
   const [view, setView] = useState<"code" | "preview">("code");
   const [preview, setPreview] = useState(code);
   const [previewVersion, setPreviewVersion] = useState(0);
-  const [showHint, setShowHint] = useState(false);
+  const [hintCount, setHintCount] = useState(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setPreview(code), 350);
@@ -59,19 +59,24 @@ export function HtmlWorkspace({
               <RotateCcw size={16} /> Reset
             </button>
           )}
-          {hint && (
+          {hints.length > 0 && (
             <button
               type="button"
-              onClick={() => setShowHint((value) => !value)}
-              aria-expanded={showHint}
-              aria-label="Hint"
+              onClick={() => setHintCount((value) => Math.min(value + 1, hints.length))}
+              aria-expanded={hintCount > 0}
+              aria-label={hintCount >= hints.length ? "แสดงคำใบ้ครบแล้ว" : "แสดงคำใบ้ถัดไป"}
             >
-              <Lightbulb size={16} /> Hint
+              <Lightbulb size={16} /> คำใบ้ {hintCount}/{hints.length}
             </button>
           )}
         </div>
       </div>
-      {showHint && <div className="lab-hint">Hint จะเพิ่มในขั้นถัดไป</div>}
+      {hintCount > 0 && (
+        <div className="lab-hint" aria-live="polite">
+          <strong>คำใบ้ {hintCount}/{hints.length}</strong>
+          <p>{hints[hintCount - 1]}</p>
+        </div>
+      )}
       <div className="lab-tabs" role="tablist" aria-label="มุมมอง Code Lab">
         <button
           role="tab"

@@ -1,9 +1,11 @@
 import { useCallback, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { AppSidebar } from "../navigation/AppSidebar";
 import { MobileNavigation } from "../navigation/MobileNavigation";
+import { AssistantChat } from "../assistant/AssistantChat";
 
 export function AppLayout() {
+  const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   return (
@@ -18,10 +20,11 @@ export function AppLayout() {
         onClose={closeMenu}
       />
       <main className="main-content" id="main-content" tabIndex={-1}>
-        <div className="content-wrap">
+        <div className="content-wrap content-wrap--enter" key={pathname}>
           <Outlet />
         </div>
       </main>
+      <AssistantChat />
     </div>
   );
 }

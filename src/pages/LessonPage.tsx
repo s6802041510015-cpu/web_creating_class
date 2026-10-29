@@ -1,7 +1,9 @@
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { ArrowLeft, ArrowRight, CircleCheck, LockKeyhole } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { CharacterMascot } from "../components/mascot/CharacterMascot";
+import { Lesson3DExplorer } from "../components/lesson/Lesson3DExplorer";
 import {
   CodeExample,
   FinalProjectOverview,
@@ -25,8 +27,51 @@ import { objectiveLabel } from "../data/learningPath";
 import type { Lesson } from "../data/types";
 import { NotFoundPage } from "./NotFoundPage";
 import { useLessonProgress } from "../state/LessonProgress";
+import { useTutorPage } from "../state/TutorPage";
 
 const steps = ["เริ่มต้น", "เรียนรู้", "ตัวอย่าง", "ลองทำ", "สรุป"];
+
+function LessonNotes({ lesson }: { lesson: Lesson }) {
+  if (lesson.learn.length === 0) return null;
+  return (
+    <section className="lesson-notes" aria-label="เนื้อหาเพิ่มเติม">
+      <h3 className="lesson-subheading">อ่านให้เข้าใจทีละส่วน</h3>
+      <div className="content-card-grid">
+        {lesson.learn.map((section, index) => (
+          <article className="content-card" key={section.title}>
+            <span className="content-card__number">{String(index + 1).padStart(2, "0")}</span>
+            <h3>{section.title}</h3>
+            {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+            {section.example && <CodeExample example={section.example} />}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function LessonExamples({ lesson }: { lesson: Lesson }) {
+  if (lesson.examples.length === 0) return null;
+  return (
+    <section className="lesson-examples" aria-label="ตัวอย่างเพิ่มเติม">
+      <h3 className="lesson-subheading">ดูตัวอย่างและสังเกตผล</h3>
+      {lesson.examples.map((example) => <CodeExample key={example.label} example={example} />)}
+    </section>
+  );
+}
+
+function Lesson3DStage({ lesson, title, children }: { lesson: Lesson; title: string; children: ReactNode }) {
+  return (
+    <div className="lesson-stage lesson-stage--with-3d">
+      <section className="lesson-stage__learning-panel">
+        <span className="section-kicker">EXAMPLE</span>
+        <h2>{title}</h2>
+        {children}
+      </section>
+      <Lesson3DExplorer lessonId={lesson.id} />
+    </div>
+  );
+}
 
 function LessonStage({ lesson, step }: { lesson: Lesson; step: number }) {
   if (step === 0)
@@ -49,11 +94,7 @@ function LessonStage({ lesson, step }: { lesson: Lesson; step: number }) {
         <div className="lesson-stage">
           <span className="section-kicker">LEARN</span>
           <h2>เว็บไซต์ในชีวิตประจำวัน</h2>
-          <p>
-            เว็บไซต์ที่เราใช้งานในชีวิตประจำวันประกอบด้วยข้อความ รูปภาพ เมนู
-            และลิงก์ต่าง ๆ
-          </p>
-          <p>องค์ประกอบเหล่านี้สามารถสร้างและกำหนดโครงสร้างด้วยภาษา HTML</p>
+          <LessonNotes lesson={lesson} />
         </div>
       );
     if (lesson.id === "01")
@@ -62,6 +103,7 @@ function LessonStage({ lesson, step }: { lesson: Lesson; step: number }) {
           <span className="section-kicker">LEARN</span>
           <h2>HTML มาจากคำ 3 ส่วน</h2>
           <TermExplorer />
+          <LessonNotes lesson={lesson} />
         </div>
       );
     if (lesson.id === "02")
@@ -78,6 +120,7 @@ function LessonStage({ lesson, step }: { lesson: Lesson; step: number }) {
               </article>
             ))}
           </div>
+          <LessonNotes lesson={lesson} />
         </div>
       );
     if (lesson.id === "03")
@@ -123,6 +166,7 @@ function LessonStage({ lesson, step }: { lesson: Lesson; step: number }) {
               <span key={text}>{text}</span>
             ))}
           </div>
+          <LessonNotes lesson={lesson} />
         </div>
       );
     return (
@@ -145,6 +189,7 @@ function LessonStage({ lesson, step }: { lesson: Lesson; step: number }) {
             <li key={item}>{item}</li>
           ))}
         </ol>
+        <LessonNotes lesson={lesson} />
       </div>
     );
   }
@@ -160,13 +205,12 @@ function LessonStage({ lesson, step }: { lesson: Lesson; step: number }) {
               <span key={item}>{item}</span>
             ))}
           </div>
+          <LessonExamples lesson={lesson} />
         </div>
       );
     if (lesson.id === "01")
       return (
-        <div className="lesson-stage">
-          <span className="section-kicker">EXAMPLE</span>
-          <h2>HyperText + Markup + Language</h2>
+        <Lesson3DStage lesson={lesson} title="HyperText + Markup + Language">
           <div className="html-formula">
             <strong>HTML</strong>
             <span>=</span>
@@ -176,42 +220,39 @@ function LessonStage({ lesson, step }: { lesson: Lesson; step: number }) {
             <b>+</b>
             <span>Language</span>
           </div>
-        </div>
+          <LessonExamples lesson={lesson} />
+        </Lesson3DStage>
       );
     if (lesson.id === "02")
       return (
-        <div className="lesson-stage">
-          <span className="section-kicker">EXAMPLE</span>
-          <h2>องค์ประกอบของหน้าเว็บไซต์</h2>
+        <Lesson3DStage lesson={lesson} title="องค์ประกอบของหน้าเว็บไซต์">
           <MockWebsiteExplorer />
-        </div>
+          <LessonExamples lesson={lesson} />
+        </Lesson3DStage>
       );
     if (lesson.id === "03")
       return (
-        <div className="lesson-stage">
-          <span className="section-kicker">EXAMPLE</span>
-          <h2>โครงสร้างเอกสาร HTML</h2>
+        <Lesson3DStage lesson={lesson} title="โครงสร้างเอกสาร HTML">
           <CodeExample
             example={{ label: "โครงสร้างเอกสาร HTML", code: htmlStructureCode }}
           />
           <h3 className="lesson-subheading">สำรวจโครงสร้าง</h3>
           <StructureExplorer />
-        </div>
+          <LessonExamples lesson={lesson} />
+        </Lesson3DStage>
       );
     if (lesson.id === "04")
       return (
-        <div className="lesson-stage">
-          <span className="section-kicker">EXAMPLE</span>
-          <h2>HTML TAG EXPLORER</h2>
+        <Lesson3DStage lesson={lesson} title="HTML TAG EXPLORER">
           <TagExplorer />
-        </div>
+          <LessonExamples lesson={lesson} />
+        </Lesson3DStage>
       );
     return (
-      <div className="lesson-stage">
-        <span className="section-kicker">EXAMPLE</span>
-        <h2>เว็บไซต์ 3 หน้า</h2>
+      <Lesson3DStage lesson={lesson} title="เว็บไซต์ 3 หน้า">
         <FinalProjectOverview />
-      </div>
+        <LessonExamples lesson={lesson} />
+      </Lesson3DStage>
     );
   }
 
@@ -253,7 +294,7 @@ function LessonStage({ lesson, step }: { lesson: Lesson; step: number }) {
         ))}
       </ul>
       {lesson.id === "04" && (
-        <Button to="/code-lab">
+        <Button to="/code-lab?practice=heading">
           ไปลองเขียนโค้ด <ArrowRight size={17} />
         </Button>
       )}
@@ -271,8 +312,16 @@ export function LessonPage() {
   const [step, setStep] = useState(0);
   const [maxStep, setMaxStep] = useState(0);
   const { completedIds, isUnlocked, completeLesson } = useLessonProgress();
+  const { setPage } = useTutorPage();
   useLayoutEffect(() => { setStep(0); setMaxStep(0); }, [lessonId]);
   const lesson = lessons.find((item) => item.id === lessonId);
+  const lessonTitle = lesson?.title ?? "";
+  const lessonIntro = lesson?.intro[0] ?? "";
+  useEffect(() => {
+    if (!lesson || !isUnlocked(lesson.id)) return;
+    setPage({ path: `/lessons/${lesson.id}`, kind: "lesson", title: `บทที่ ${lesson.id} ${lessonTitle}`, detail: `ขั้นตอน ${step + 1}/5: ${steps[step]}. ${lessonIntro}` });
+    return () => setPage(null);
+  }, [lesson, lessonIntro, lessonTitle, step, isUnlocked, setPage]);
   if (!lesson) return <NotFoundPage />;
   if (!isUnlocked(lesson.id)) return (
     <div className="inner-page">
@@ -284,6 +333,7 @@ export function LessonPage() {
   const percent = (step + 1) * 20;
   const completed = completedIds.includes(lesson.id);
   const nextLesson = lessons[index + 1];
+  const show3D = step === 2 && lesson.id !== "00";
 
   function goNextStep() {
     const next = Math.min(4, step + 1);
@@ -334,9 +384,9 @@ export function LessonPage() {
           </button>
         ))}
       </nav>
-      <div className="lesson-body">
+      <div className={`lesson-body ${show3D ? "lesson-body--with-3d" : ""}`}>
         <div>
-          <LessonStage lesson={lesson} step={step} />
+          <LessonStage key={`${lesson.id}-${step}`} lesson={lesson} step={step} />
           <div className="lesson-stage-controls">
             <button
               className="button button--secondary"
@@ -353,7 +403,7 @@ export function LessonPage() {
             </button>}
           </div>
         </div>
-        <aside className="guide-box">
+        {!show3D && <aside className="guide-box">
           <CharacterMascot variant="guide" />
           <div>
             <span className="guide-box__label">
@@ -361,23 +411,43 @@ export function LessonPage() {
             </span>
             <p>“ลองเรียนทีละขั้น แล้วค่อยไปทดลองเขียนโค้ดนะ”</p>
           </div>
-        </aside>
+        </aside>}
       </div>
       <nav className="lesson-neighbors" aria-label="เปลี่ยนบทเรียน">
-        {index > 0 ? (
-          <Link to={`/lessons/${lessons[index - 1].id}`}>
-            <ArrowLeft size={16} /> บทก่อนหน้า: {lessons[index - 1].title}
+        {index > 0 && (
+          <Link className="lesson-neighbors__card lesson-neighbors__card--previous" to={`/lessons/${lessons[index - 1].id}`}>
+            <span className="lesson-neighbors__icon"><ArrowLeft size={20} aria-hidden="true" /></span>
+            <span className="lesson-neighbors__text">
+              <span className="lesson-neighbors__direction">บทเรียนก่อนหน้า</span>
+              <strong>{lessons[index - 1].title}</strong>
+            </span>
           </Link>
-        ) : (
-          <span />
         )}
         {nextLesson ? (
-          isUnlocked(nextLesson.id) ? <Link to={`/lessons/${nextLesson.id}`}>
-            บทถัดไป: {nextLesson.title} <ArrowRight size={16} />
-          </Link> : <span className="lesson-neighbors__locked"><LockKeyhole size={16} /> บทถัดไปยังไม่ปลดล็อก</span>
+          isUnlocked(nextLesson.id) ? (
+            <Link className="lesson-neighbors__card lesson-neighbors__card--next lesson-neighbors__next" to={`/lessons/${nextLesson.id}`}>
+              <span className="lesson-neighbors__text">
+                <span className="lesson-neighbors__direction">บทเรียนถัดไป</span>
+                <strong>{nextLesson.title}</strong>
+              </span>
+              <span className="lesson-neighbors__icon"><ArrowRight size={20} aria-hidden="true" /></span>
+            </Link>
+          ) : (
+            <span className="lesson-neighbors__card lesson-neighbors__card--locked lesson-neighbors__next">
+              <span className="lesson-neighbors__text">
+                <span className="lesson-neighbors__direction">บทเรียนถัดไปยังไม่ปลดล็อก</span>
+                <strong>เรียนจบบทนี้ก่อนเพื่อไปต่อ</strong>
+              </span>
+              <span className="lesson-neighbors__icon"><LockKeyhole size={20} aria-hidden="true" /></span>
+            </span>
+          )
         ) : (
-          <Link to="/workshop">
-            เริ่ม Workshop <ArrowRight size={16} />
+          <Link className="lesson-neighbors__card lesson-neighbors__card--next lesson-neighbors__next" to="/workshop">
+            <span className="lesson-neighbors__text">
+              <span className="lesson-neighbors__direction">เรียนครบทุกบทแล้ว</span>
+              <strong>เริ่ม Workshop</strong>
+            </span>
+            <span className="lesson-neighbors__icon"><ArrowRight size={20} aria-hidden="true" /></span>
           </Link>
         )}
       </nav>

@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { BrandLogo } from "../brand/BrandLogo";
 import { navigation } from "../../data/navigation";
+import { ThemeToggle } from "../ui/ThemeToggle";
 
 export function MobileNavigation({
   open,
@@ -30,16 +31,19 @@ export function MobileNavigation({
     <>
       <header className="mobile-header">
         <BrandLogo compact />
-        <button
-          className="icon-button"
-          type="button"
-          onClick={onToggle}
-          aria-label={open ? "ปิดเมนู" : "เปิดเมนู"}
-          aria-expanded={open}
-          aria-controls="mobile-drawer"
-        >
-          {open ? <X /> : <Menu />}
-        </button>
+        <div className="mobile-header__actions">
+          <ThemeToggle compact />
+          <button
+            className="icon-button"
+            type="button"
+            onClick={onToggle}
+            aria-label={open ? "ปิดเมนู" : "เปิดเมนู"}
+            aria-expanded={open}
+            aria-controls="mobile-drawer"
+          >
+            {open ? <X /> : <Menu />}
+          </button>
+        </div>
       </header>
       {open && (
         <button
@@ -69,6 +73,7 @@ export function MobileNavigation({
             <span>{item.label}</span>
           </NavLink>
         ))}
+        <ThemeToggle />
       </nav>
     </>
   );

@@ -1,0 +1,273 @@
+:root {
+  --motion-quick: 150ms;
+  --motion-standard: 240ms;
+  --motion-page: 340ms;
+  --motion-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Keep feedback on the controls that actually respond to a click. */
+button:not(:disabled),
+a[href] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button:not(:disabled),
+.nav-link,
+.icon-button,
+.theme-toggle__compact,
+.theme-toggle__choices button,
+.lesson-row:not(.lesson-row--locked),
+.lesson-neighbors a.lesson-neighbors__card,
+.step-nav__item:not(:disabled),
+.practice-strip button,
+.workshop-tabs button,
+.workshop-flow__steps button,
+.workshop-flow__controls button:not(:disabled),
+.lab-tabs button,
+.lab-toolbar__actions button:not(:disabled),
+.code-lab-check-button,
+.tag-practice-link,
+.term-option,
+.structure-node,
+.tag-categories button,
+.tag-list button,
+.mock-site button,
+.quiz-choices label,
+.self-check-grid label,
+.assistant-chat__launcher,
+.assistant-chat__close,
+.assistant-chat__suggestions button,
+.assistant-chat__input-row button:not(:disabled) {
+  transition:
+    transform var(--motion-quick) var(--motion-ease-out),
+    background-color var(--motion-standard) var(--motion-ease),
+    border-color var(--motion-standard) var(--motion-ease),
+    color var(--motion-standard) var(--motion-ease),
+    box-shadow var(--motion-standard) var(--motion-ease),
+    filter var(--motion-quick) var(--motion-ease);
+}
+
+.action-card {
+  transition:
+    transform var(--motion-standard) var(--motion-ease-out),
+    border-color var(--motion-standard) var(--motion-ease),
+    box-shadow var(--motion-standard) var(--motion-ease);
+}
+
+.lesson-3d__controls button,
+.lesson-3d__choices button,
+.lesson-3d__node-face {
+  transition:
+    transform var(--motion-quick) var(--motion-ease-out),
+    background-color var(--motion-standard) var(--motion-ease),
+    border-color var(--motion-standard) var(--motion-ease),
+    box-shadow var(--motion-standard) var(--motion-ease),
+    filter var(--motion-quick) var(--motion-ease);
+}
+
+.text-link,
+.back-link,
+.reveal-card button,
+.code-lab-feedback button,
+.action-card__button {
+  transition: color var(--motion-standard) var(--motion-ease), transform var(--motion-quick) var(--motion-ease-out);
+}
+
+@media (hover: hover) {
+  .button:not(:disabled):hover,
+  .code-lab-check-button:hover,
+  .assistant-chat__launcher:hover {
+    transform: translateY(-3px);
+  }
+
+  .nav-link:hover,
+  .lesson-row:not(.lesson-row--locked):hover {
+    transform: translateX(4px);
+  }
+
+  .step-nav__item:not(:disabled):hover,
+  .practice-strip button:hover,
+  .workshop-tabs button:hover,
+  .workshop-flow__steps button:hover,
+  .workshop-flow__controls button:not(:disabled):hover,
+  .theme-toggle__choices button:hover,
+  .term-option:hover,
+  .structure-node:hover,
+  .tag-categories button:hover,
+  .tag-list button:hover,
+  .mock-site button:hover,
+  .assistant-chat__suggestions button:hover {
+    transform: translateY(-2px);
+  }
+
+  .lesson-3d__controls button:hover,
+  .lesson-3d__choices button:hover {
+    transform: translateY(-2px);
+  }
+
+  .quiz-choices label:hover,
+  .self-check-grid label:hover {
+    transform: translateX(3px);
+    border-color: rgba(112, 138, 245, 0.68);
+  }
+
+  .text-link:hover,
+  .back-link:hover,
+  .reveal-card button:hover,
+  .code-lab-feedback button:hover,
+  .action-card__button:hover {
+    transform: translateX(3px);
+  }
+
+  .action-card:hover,
+  .action-card:focus-within {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 35px rgba(25, 36, 107, 0.22);
+  }
+}
+
+.button:not(:disabled):active,
+.code-lab-check-button:active,
+.assistant-chat__launcher:active,
+.lesson-neighbors a.lesson-neighbors__card:active {
+  transform: translateY(1px) scale(0.97);
+  filter: brightness(0.94);
+}
+
+.nav-link:active,
+.icon-button:active,
+.theme-toggle__compact:active,
+.theme-toggle__choices button:active,
+.step-nav__item:not(:disabled):active,
+.practice-strip button:active,
+.workshop-tabs button:active,
+.workshop-flow__steps button:active,
+.workshop-flow__controls button:not(:disabled):active,
+.lab-tabs button:active,
+.lab-toolbar__actions button:not(:disabled):active,
+.term-option:active,
+.structure-node:active,
+.tag-categories button:active,
+.tag-list button:active,
+.mock-site button:active,
+.assistant-chat__close:active,
+.assistant-chat__suggestions button:active,
+.assistant-chat__input-row button:not(:disabled):active {
+  transform: scale(0.95);
+  filter: brightness(0.93);
+}
+
+.lesson-3d__controls button:active,
+.lesson-3d__choices button:active {
+  transform: scale(0.95);
+  filter: brightness(0.93);
+}
+.lesson-3d__node:active .lesson-3d__node-face {
+  filter: brightness(1.2);
+}
+.journey-item a:active .journey-item__node {
+  transform: scale(0.93);
+}
+.text-link:active,
+.back-link:active,
+.reveal-card button:active,
+.code-lab-feedback button:active,
+.action-card__button:active {
+  transform: translateX(1px) scale(0.97);
+}
+
+.lesson-row:not(.lesson-row--locked):active,
+.quiz-choices label:active,
+.self-check-grid label:active {
+  transform: scale(0.99);
+}
+
+.quiz-choices label.selected {
+  box-shadow: inset 3px 0 #7b8dff, 0 7px 22px rgba(54, 77, 184, 0.12);
+}
+
+.self-check-grid label.checked,
+.term-option--selected,
+.structure-node--selected {
+  box-shadow: inset 3px 0 rgba(116, 143, 255, 0.85);
+}
+
+.quiz-choices input,
+.self-check-grid input {
+  transition: transform var(--motion-quick) var(--motion-ease-out);
+}
+.quiz-choices input:checked,
+.self-check-grid input:checked {
+  transform: scale(1.12);
+}
+.quiz-choices label:has(input:focus-visible),
+.self-check-grid label:has(input:focus-visible) {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+/* Route changes and small content swaps use a short, readable entrance. */
+.content-wrap--enter {
+  animation: motion-page-enter var(--motion-page) var(--motion-ease-out) both;
+}
+.lesson-stage,
+.quiz-question,
+.code-lab-task,
+.workshop-page-detail,
+.workshop-flow__description,
+.code-lab-feedback {
+  animation: motion-panel-enter var(--motion-standard) var(--motion-ease-out) both;
+}
+.assistant-chat__panel,
+.confirm-dialog[open] {
+  transform-origin: bottom right;
+  animation: motion-pop-in var(--motion-standard) var(--motion-ease-out) both;
+}
+.assistant-chat__message {
+  animation: motion-panel-enter var(--motion-standard) var(--motion-ease-out) both;
+}
+.confirm-dialog[open]::backdrop {
+  animation: motion-fade-in var(--motion-standard) ease-out both;
+}
+
+body,
+.app-shell,
+.sidebar,
+.mobile-header,
+.mobile-drawer {
+  transition: background-color var(--motion-standard) var(--motion-ease), color var(--motion-standard) var(--motion-ease);
+}
+
+@keyframes motion-page-enter {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes motion-panel-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes motion-pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes motion-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content-wrap--enter,
+  .lesson-stage,
+  .quiz-question,
+  .code-lab-task,
+  .workshop-page-detail,
+  .workshop-flow__description,
+  .code-lab-feedback,
+  .assistant-chat__panel,
+  .assistant-chat__message,
+  .confirm-dialog[open],
+  .confirm-dialog[open]::backdrop {
+    animation: none;
+  }
+}

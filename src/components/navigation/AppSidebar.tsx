@@ -2,8 +2,11 @@ import { NavLink } from "react-router-dom";
 import { UserRound } from "lucide-react";
 import { BrandLogo } from "../brand/BrandLogo";
 import { navigation } from "../../data/navigation";
+import { ThemeToggle } from "../ui/ThemeToggle";
+import { useLineAuth } from "../../state/LineAuth";
 
 export function AppSidebar() {
+  const { user, isDemo } = useLineAuth();
   return (
     <aside className="sidebar" aria-label="เมนูหลัก">
       <div className="sidebar__top">
@@ -25,13 +28,14 @@ export function AppSidebar() {
         ))}
       </nav>
       <div className="sidebar__bottom">
+        <ThemeToggle />
         <div className="profile">
           <span className="profile__avatar">
             <UserRound size={19} aria-hidden="true" />
           </span>
           <span>
-            <strong>ผู้เรียน WebQuest</strong>
-            <small>พร้อมเริ่มการเรียนรู้</small>
+            <strong>{user?.displayName ?? "ผู้เรียน WebQuest"}</strong>
+            <small>{isDemo ? "โหมดทดลอง · ยังไม่เชื่อม LINE" : "เข้าสู่ระบบด้วย LINE"}</small>
           </span>
         </div>
       </div>

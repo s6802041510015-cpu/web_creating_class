@@ -1,6 +1,6 @@
 export type ObjectiveId = 1 | 2 | 3 | 4 | 5;
 
-export type Example = { label: string; code: string };
+export type Example = { label: string; code: string; explanation?: string[] };
 export type QuickCheck = { question: string; expectedConcept: string };
 export type LessonSection = {
   title: string;

@@ -1,0 +1,52 @@
+.line-auth {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 10%, rgba(100, 73, 255, .26), transparent 42%), var(--bg-primary);
+}
+.line-auth__card {
+  width: min(100%, 440px);
+  padding: clamp(28px, 6vw, 48px);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+}
+.line-auth__mark {
+  display: inline-grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--purple), var(--blue));
+  color: white;
+  font-size: 29px;
+  font-weight: 900;
+}
+.line-auth__eyebrow { margin: 16px 0 8px; color: var(--cyan); font-size: 12px; font-weight: 800; letter-spacing: .16em; }
+.line-auth h1 { margin-bottom: 12px; font-size: clamp(24px, 5vw, 30px); }
+.line-auth p { color: var(--text-secondary); }
+.line-auth__button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(120deg, var(--purple), var(--blue));
+  color: white;
+  font-weight: 700;
+  transition: transform .2s ease, filter .2s ease;
+}
+.line-auth__button:hover { filter: brightness(1.14); transform: translateY(-2px); }
+.line-auth__button:active { transform: scale(.98); }
+.line-auth__status { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 22px; color: var(--text-secondary); }
+.line-auth__spinner { animation: line-auth-spin 1s linear infinite; }
+.line-auth__error { margin: 22px 0 4px; color: #fb7185 !important; }
+@keyframes line-auth-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .line-auth__spinner { animation: none; } .line-auth__button { transition: none; } }

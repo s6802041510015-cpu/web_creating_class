@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Download } from "lucide-react";
 import { HtmlWorkspace } from "../components/lab/HtmlWorkspace";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -7,20 +7,39 @@ import {
   projectChecklist,
   projectWorkflow,
 } from "../data/finalProject";
-import { htmlStructureCode } from "../data/lessons";
-
-const files = ["page1.html", "page2.html", "page3.html"] as const;
-const initialCode = Object.fromEntries(
-  files.map((file) => [file, htmlStructureCode]),
-) as Record<string, string>;
+import { readWorkshopDraft, workshopFiles, workshopStorageKey } from "../state/StudentWork";
+import { useTutorPage } from "../state/TutorPage";
 
 export function WorkshopPage() {
-  const [activePage, setActivePage] = useState(0);
-  const [activeStep, setActiveStep] = useState(0);
-  const [codes, setCodes] = useState<Record<string, string>>(initialCode);
-  const [checked, setChecked] = useState<Set<string>>(() => new Set());
-  const currentFile = files[activePage];
+  const [savedDraft] = useState(readWorkshopDraft);
+  const [activePage, setActivePage] = useState(savedDraft.activePage);
+  const [activeStep, setActiveStep] = useState(savedDraft.activeStep);
+  const [codes, setCodes] = useState<Record<string, string>>(savedDraft.codes);
+  const [checked, setChecked] = useState<Set<string>>(() => new Set(savedDraft.checked));
+  const currentFile = workshopFiles[activePage];
   const currentPage = finalProjectPages[activePage];
+  const { setPage } = useTutorPage();
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(workshopStorageKey, JSON.stringify({
+        codes, checked: [...checked], activePage, activeStep,
+      }));
+    } catch {
+      // The workshop remains usable when browser storage is unavailable.
+    }
+  }, [codes, checked, activePage, activeStep]);
+
+  useEffect(() => {
+    setPage({
+      path: "/workshop",
+      kind: "workshop",
+      title: `Workshop: ${currentPage.title}`,
+      detail: `กำลังทำ ${currentFile}; ขั้นตอน ${activeStep + 1}/${projectWorkflow.length}: ${projectWorkflow[activeStep]}. ข้อกำหนด: ${currentPage.requirements.join("; ")}`,
+      code: codes[currentFile],
+    });
+    return () => setPage(null);
+  }, [activeStep, codes, currentFile, currentPage, setPage]);
 
   function toggleChecklist(id: string) {
     setChecked((previous) => {
@@ -32,7 +51,7 @@ export function WorkshopPage() {
   }
 
   function followLink(href: string): boolean {
-    const index = files.findIndex((file) => href.replace(/^\.\//, "") === file);
+    const index = workshopFiles.findIndex((file) => href.replace(/^\.\//, "") === file);
     if (index === -1) return false;
     setActivePage(index);
     return true;
@@ -80,7 +99,7 @@ export function WorkshopPage() {
             </button>
           ))}
         </nav>
-        <p>{projectWorkflow[activeStep]}</p>
+        <p className="workshop-flow__description" key={activeStep}>{projectWorkflow[activeStep]}</p>
         <div className="workshop-flow__controls">
           <button
             type="button"
@@ -123,6 +142,7 @@ export function WorkshopPage() {
         ))}
       </div>
       <section
+        key={currentPage.id}
         className="workshop-page-detail"
         aria-label={`ข้อกำหนด ${currentPage.title}`}
       >
@@ -189,7 +209,7 @@ export function WorkshopPage() {
         </div>
         <p className="supporting-note">
           Checklist นี้สำหรับตรวจด้วยตนเอง
-          ยังไม่มีการให้คะแนนหรือบันทึกข้อมูลหลังรีโหลด
+          ระบบบันทึกโค้ดและรายการตรวจในเบราว์เซอร์นี้อัตโนมัติ ยังไม่มีการให้คะแนน
         </p>
       </section>
     </div>

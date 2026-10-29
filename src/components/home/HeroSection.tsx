@@ -1,5 +1,5 @@
 import { ArrowRight, Sparkles } from "lucide-react";
-import { CharacterMascot } from "../mascot/CharacterMascot";
+import { Html3DScene } from "./Html3DScene";
 import { Button } from "../ui/Button";
 
 export function HeroSection() {
@@ -20,9 +20,9 @@ export function HeroSection() {
           เริ่มเรียน <ArrowRight size={18} aria-hidden="true" />
         </Button>
       </div>
-      <div className="hero__visual">
+      <div className="hero__visual hero__visual--3d">
         <div className="hero__glow" aria-hidden="true" />
-        <CharacterMascot variant="hero" />
+        <Html3DScene />
       </div>
     </section>
   );

@@ -7,6 +7,8 @@ export function CurrentLearning() {
   const { completedIds, isUnlocked } = useLessonProgress();
   const lesson = lessons.find((item) => isUnlocked(item.id) && !completedIds.includes(item.id)) ?? lessons[lessons.length - 1];
   const allCompleted = lessons.every((item) => completedIds.includes(item.id));
+  const completedCount = lessons.filter((item) => completedIds.includes(item.id)).length;
+  const percent = Math.round((completedCount / lessons.length) * 100);
   return (
     <section className="section-block" aria-labelledby="current-title">
       <div className="section-heading">
@@ -32,11 +34,11 @@ export function CurrentLearning() {
             aria-label="ความก้าวหน้าของบทเรียน"
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={allCompleted ? 100 : 0}
+            aria-valuenow={percent}
           >
-            <span style={{ width: allCompleted ? "100%" : "0%" }} />
+            <span style={{ width: `${percent}%` }} />
           </div>
-          <small>{allCompleted ? "เรียนครบแล้ว" : "พร้อมเรียน"}</small>
+          <small>{allCompleted ? "เรียนครบแล้ว" : `เรียนจบ ${completedCount} / ${lessons.length} บท (${percent}%)`}</small>
         </div>
         <Button
           to={`/lessons/${lesson.id}`}

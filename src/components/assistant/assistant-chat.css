@@ -1,0 +1,201 @@
+.assistant-chat {
+  position: fixed;
+  right: 24px;
+  bottom: 22px;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  font-family: "Noto Sans Thai", system-ui, sans-serif;
+}
+
+.assistant-chat__launcher {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 54px;
+  padding: 0 18px;
+  border: 1px solid rgba(177, 164, 255, .45);
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(125deg, #335dff, #7137da);
+  box-shadow: 0 12px 32px rgba(52, 56, 181, .42);
+  font-weight: 700;
+}
+.assistant-chat__launcher:hover { filter: brightness(1.1); }
+.assistant-chat__launcher svg { flex: none; }
+
+.assistant-chat__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(400px, calc(100vw - 32px));
+  height: min(620px, calc(100dvh - 108px));
+  min-height: 330px;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  color: var(--text-primary);
+  background: var(--surface);
+  box-shadow: 0 22px 70px rgba(2, 6, 35, .55), 0 0 0 1px rgba(94, 91, 240, .16);
+}
+.assistant-chat__header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-soft);
+  background: linear-gradient(100deg, rgba(48, 84, 232, .18), rgba(122, 60, 225, .14));
+}
+.assistant-chat__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  color: #fff;
+  background: linear-gradient(135deg, #3265ef, #8e4be8);
+}
+.assistant-chat__header strong,
+.assistant-chat__header small { display: block; line-height: 1.4; }
+.assistant-chat__header strong { font-size: 15px; }
+.assistant-chat__header small { color: var(--text-secondary); font-size: 11px; }
+.assistant-chat__close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-left: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: var(--surface-soft);
+}
+.assistant-chat__close:hover { color: var(--text-primary); }
+.assistant-chat__context {
+  padding: 8px 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  background: var(--surface-soft);
+  font-size: 11px;
+}
+.assistant-chat__context strong { color: var(--text-primary); }
+.assistant-chat__messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 18px 15px;
+  overflow-y: auto;
+}
+.assistant-chat__message {
+  max-width: 89%;
+  padding: 11px 13px;
+  border-radius: 15px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.assistant-chat__message--assistant {
+  align-self: flex-start;
+  border: 1px solid var(--border-soft);
+  border-bottom-left-radius: 5px;
+  color: var(--text-primary);
+  background: var(--surface-elevated);
+}
+.assistant-chat__message--user {
+  align-self: flex-end;
+  border-bottom-right-radius: 5px;
+  color: #fff;
+  background: linear-gradient(125deg, #2b5deb, #6a3cce);
+}
+.assistant-chat__loading { display: inline-flex; align-items: center; gap: 8px; }
+.assistant-chat__spinner { animation: assistant-chat-spin 1s linear infinite; }
+@keyframes assistant-chat-spin { to { transform: rotate(360deg); } }
+.assistant-chat__suggestions {
+  display: flex;
+  gap: 6px;
+  padding: 0 14px 10px;
+  overflow-x: auto;
+}
+.assistant-chat__suggestions button {
+  flex: none;
+  padding: 6px 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: var(--surface-soft);
+  font-size: 11px;
+}
+.assistant-chat__suggestions button:hover { color: var(--text-primary); border-color: var(--blue-light); }
+.assistant-chat__notice,
+.assistant-chat__error {
+  margin: 0 14px 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.assistant-chat__notice { color: var(--text-secondary); background: var(--surface-soft); }
+.assistant-chat__error { color: #ffd0d0; background: rgba(198, 54, 72, .24); }
+.assistant-chat__composer { padding: 12px 14px 13px; border-top: 1px solid var(--border-soft); }
+.assistant-chat__code-optin {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+.assistant-chat__code-optin input { accent-color: var(--blue-light); }
+.assistant-chat__input-row { display: flex; align-items: flex-end; gap: 7px; }
+.assistant-chat__input-row textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: 110px;
+  resize: vertical;
+  padding: 9px 11px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  outline: none;
+  color: var(--text-primary);
+  background: var(--surface-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.assistant-chat__input-row textarea:focus { border-color: var(--blue-light); }
+.assistant-chat__input-row textarea::placeholder { color: var(--text-muted); }
+.assistant-chat__input-row textarea:disabled { opacity: .62; }
+.assistant-chat__input-row button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--blue);
+}
+.assistant-chat__input-row button:disabled { opacity: .45; cursor: not-allowed; }
+.assistant-chat__composer > small { display: block; margin-top: 5px; color: var(--text-muted); font-size: 10px; }
+
+html[data-theme="light"] .assistant-chat__panel { box-shadow: 0 22px 55px rgba(33, 52, 118, .22); }
+html[data-theme="light"] .assistant-chat__error { color: #9c2036; background: #ffebef; }
+
+@media (max-width: 680px) {
+  .assistant-chat { right: 12px; bottom: 12px; }
+  .assistant-chat__panel { width: calc(100vw - 24px); height: min(590px, calc(100dvh - 95px)); }
+  .assistant-chat__launcher { min-height: 50px; padding: 0 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-chat__spinner { animation: none; }
+}

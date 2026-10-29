@@ -29,6 +29,11 @@ export function CodeExample({ example }: { example: Example }) {
           )}
         </code>
       </pre>
+      {example.explanation && (
+        <ul className="lesson-code__notes">
+          {example.explanation.map((note) => <li key={note}>{note}</li>)}
+        </ul>
+      )}
     </figure>
   );
 }
@@ -170,6 +175,7 @@ export function StructureExplorer() {
 }
 
 const tagCategories = ["Heading", "Text", "Image", "Link", "List"] as const;
+const tagPracticeIds = { Heading: "heading", Text: "paragraph", Image: "image", Link: "link", List: "list" } as const;
 
 export function TagExplorer() {
   const [category, setCategory] =
@@ -239,6 +245,9 @@ export function TagExplorer() {
               </div>
             </div>
           ))}
+          <Link className="tag-practice-link" to={`/code-lab?practice=${tagPracticeIds[category]}`}>
+            ฝึก {category} ใน Code Lab <ArrowRight size={16} />
+          </Link>
         </div>
       </div>
     </div>
