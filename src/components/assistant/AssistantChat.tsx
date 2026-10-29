@@ -4,6 +4,7 @@ import { Bot, Code2, LoaderCircle, MessageCircle, Send, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useTutorPage } from "../../state/TutorPage";
 import { useLessonProgress } from "../../state/LessonProgress";
+import { useLineAuth } from "../../state/LineAuth";
 import "./assistant-chat.css";
 
 type ChatMessage = { role: "user" | "assistant"; text: string };
@@ -21,6 +22,7 @@ function fallbackPage(pathname: string): PageContext {
 }
 
 export function AssistantChat() {
+  const { isDemo, getIdToken } = useLineAuth();
   const location = useLocation();
   const { page } = useTutorPage();
   const { isUnlocked } = useLessonProgress();
@@ -67,7 +69,7 @@ export function AssistantChat() {
   async function sendMessage(event?: FormEvent) {
     event?.preventDefault();
     const question = draft.trim();
-    if (!question || sending || !apiOrigin || isHidden) return;
+    if (!question || sending || !apiOrigin || isHidden || isDemo) return;
     const history = messages.slice(-6);
     const controller = new AbortController();
     abortRef.current = controller;
@@ -76,9 +78,11 @@ export function AssistantChat() {
     setError("");
     setSending(true);
     try {
+      const token = await getIdToken();
+      if (!token) throw new Error("กรุณาเข้าสู่ระบบด้วย LINE อีกครั้ง");
       const response = await fetch(`${apiOrigin}/api/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           message: question,
           history,
@@ -135,6 +139,7 @@ export function AssistantChat() {
             {suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => { setDraft(suggestion); inputRef.current?.focus(); }}>{suggestion}</button>)}
           </div>}
           {!apiOrigin && <p className="assistant-chat__notice" role="status">ช่องแชทพร้อมแล้ว แต่ยังไม่ได้เชื่อม API ของ Vercel จึงยังส่งข้อความไม่ได้</p>}
+          {isDemo && apiOrigin && <p className="assistant-chat__notice" role="status">เปิดเว็บผ่าน LINE เพื่อใช้ผู้ช่วย AI</p>}
           {error && <p className="assistant-chat__error" role="alert">{error}</p>}
           <form className="assistant-chat__composer" onSubmit={(event) => void sendMessage(event)}>
             {canAttachCode && <label className="assistant-chat__code-optin">
@@ -142,8 +147,8 @@ export function AssistantChat() {
               <Code2 size={15} aria-hidden="true" /> แนบโค้ดปัจจุบันเพื่อขอคำแนะนำ
             </label>}
             <div className="assistant-chat__input-row">
-              <textarea ref={inputRef} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} placeholder="พิมพ์คำถามของคุณ..." rows={2} maxLength={1000} aria-label="พิมพ์คำถามถึงผู้ช่วย AI" disabled={!apiOrigin || sending} />
-              <button type="submit" disabled={!apiOrigin || sending || !draft.trim()} aria-label="ส่งข้อความ"><Send size={19} /></button>
+              <textarea ref={inputRef} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onKeyDown} placeholder="พิมพ์คำถามของคุณ..." rows={2} maxLength={1000} aria-label="พิมพ์คำถามถึงผู้ช่วย AI" disabled={!apiOrigin || sending || isDemo} />
+              <button type="submit" disabled={!apiOrigin || sending || isDemo || !draft.trim()} aria-label="ส่งข้อความ"><Send size={19} /></button>
             </div>
             <small>Enter เพื่อส่ง · Shift+Enter ขึ้นบรรทัดใหม่</small>
             <small>คำถามจะส่งไปยัง Gemini ส่วนโค้ดจะส่งเมื่อเลือกแนบเท่านั้น</small>

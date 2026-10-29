@@ -105,8 +105,11 @@ export async function writeProgress(user, input) {
   ]];
   if (index >= 0) {
     const rowNumber = index + 2;
-    await sheets(`${range(`A${rowNumber}:K${rowNumber}`)}?valueInputOption=RAW`, {
-      method: "PUT", body: JSON.stringify({ range: `'${tab}'!A${rowNumber}:K${rowNumber}`, majorDimension: "ROWS", values }),
+    await sheets("/values:batchUpdate", {
+      method: "POST", body: JSON.stringify({ valueInputOption: "RAW", data: [
+        { range: `'${tab}'!A${rowNumber}:B${rowNumber}`, majorDimension: "ROWS", values: [values[0].slice(0, 2)] },
+        { range: `'${tab}'!D${rowNumber}:K${rowNumber}`, majorDimension: "ROWS", values: [values[0].slice(3)] },
+      ] }),
     });
   } else {
     await sheets(`${range("A:K")}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
@@ -114,4 +117,31 @@ export async function writeProgress(user, input) {
     });
   }
   return progress;
+}
+
+export async function listStudents() {
+  const all = await rows();
+  return all.flatMap((row) => {
+    if (typeof row[0] !== "string" || !row[0]) return [];
+    const progress = rowProgress(row);
+    return [{
+      userId: row[0],
+      displayName: String(row[1] ?? ""),
+      className: String(row[2] ?? "").trim(),
+      updatedAt: String(row[9] ?? ""),
+      progress,
+    }];
+  });
+}
+
+export async function updateStudentClass(userId, className) {
+  const all = await rows();
+  const index = all.findIndex((row) => row[0] === userId);
+  if (index < 0) return false;
+  const rowNumber = index + 2;
+  await sheets(`${range(`C${rowNumber}`)}?valueInputOption=RAW`, {
+    method: "PUT",
+    body: JSON.stringify({ range: `'${tab}'!C${rowNumber}`, majorDimension: "ROWS", values: [[className]] }),
+  });
+  return true;
 }

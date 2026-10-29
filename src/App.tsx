@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { AppLayout } from "./components/layout/AppLayout";
 import { HomePage } from "./pages/HomePage";
@@ -60,7 +60,6 @@ function LearningApp() {
         />
         <Route path="progress" element={<ProgressPage results={results} />} />
         <Route path="web-city" element={<WebCityPage />} />
-        <Route path="teacher" element={<TeacherPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       </Routes>
@@ -68,5 +67,7 @@ function LearningApp() {
 }
 
 export default function App() {
-  return <ThemeProvider><LineAuthProvider><StudentProgressSync><LessonProgressProvider><TutorPageProvider><LearningApp /></TutorPageProvider></LessonProgressProvider></StudentProgressSync></LineAuthProvider></ThemeProvider>;
+  const { pathname } = useLocation();
+  const isTeacher = pathname === "/teacher" || pathname.startsWith("/teacher/");
+  return <ThemeProvider>{isTeacher ? <TeacherPage /> : <LineAuthProvider><StudentProgressSync><LessonProgressProvider><TutorPageProvider><LearningApp /></TutorPageProvider></LessonProgressProvider></StudentProgressSync></LineAuthProvider>}</ThemeProvider>;
 }

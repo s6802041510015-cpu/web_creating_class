@@ -1,3 +1,5 @@
+import { verifyLineIdToken } from "../lib/line-auth.mjs";
+
 const defaultOrigins = ["https://s6802041510015-cpu.github.io"];
 const allowedKinds = new Set(["home", "overview", "lesson", "code-lab", "workshop", "progress"]);
 const maxBodyLength = 18_000;
@@ -16,7 +18,7 @@ function corsHeaders(origin) {
   return allowed ? {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Vary": "Origin",
   } : null;
 }
@@ -62,6 +64,12 @@ export default {
     const code = typeof input.code === "string" && (page.kind === "code-lab" || page.kind === "workshop") ? input.code.slice(0, 6000) : "";
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return json({ error: "ยังไม่ได้ตั้งค่า Gemini API key บน Vercel" }, 503, cors ?? {});
+    const token = /^Bearer (\S+)$/i.exec(request.headers.get("Authorization") ?? "")?.[1];
+    if (!token) return json({ error: "กรุณาเข้าสู่ระบบด้วย LINE ก่อนใช้ผู้ช่วย" }, 401, cors ?? {});
+    let student;
+    try { student = await verifyLineIdToken(token); }
+    catch { return json({ error: "ตรวจสอบบัญชี LINE ไม่สำเร็จ กรุณาลองอีกครั้ง" }, 502, cors ?? {}); }
+    if (!student) return json({ error: "การเข้าสู่ระบบ LINE หมดอายุ กรุณาเข้าเว็บใหม่" }, 401, cors ?? {});
 
     const currentQuestion = [
       `บริบท: ${page.title.slice(0, 120)} — ${page.detail.slice(0, 700)}`,

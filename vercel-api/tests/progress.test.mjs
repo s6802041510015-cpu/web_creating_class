@@ -33,7 +33,7 @@ test("Google Sheets update preserves a teacher-assigned class and uses RAW value
   let update;
   globalThis.fetch = async (url, options = {}) => {
     const path = String(url);
-    if (options.method === "PUT") { update = { url: path, options }; return Response.json({ updatedRows: 1 }); }
+    if (options.method === "POST" && path.includes("values:batchUpdate")) { update = { url: path, options }; return Response.json({ totalUpdatedRows: 1 }); }
     if (path.includes("fields=sheets.properties.title")) return Response.json({ sheets: [{ properties: { title: "Students" } }] });
     if (path.includes("A1%3AK1")) return Response.json({ values: [["LINE User ID"]] });
     if (path.includes("A2%3AK")) return Response.json({ values: [[userId, "Old name", "ปวช.1/1", "", "", 0, "", 0, 0, "", JSON.stringify(empty)]] });
@@ -41,12 +41,12 @@ test("Google Sheets update preserves a teacher-assigned class and uses RAW value
   };
   try {
     await writeProgress({ userId, displayName: "New name" }, { ...empty, completedLessons: ["00"] });
-    assert.match(update.url, /valueInputOption=RAW/);
-    const row = JSON.parse(update.options.body).values[0];
-    assert.equal(row[0], userId);
-    assert.equal(row[1], "New name");
-    assert.equal(row[2], "ปวช.1/1");
-    assert.equal(row[5], 1);
+    const body = JSON.parse(update.options.body);
+    assert.equal(body.valueInputOption, "RAW");
+    assert.deepEqual(body.data[0].values[0], [userId, "New name"]);
+    assert.equal(body.data[0].range, "'Students'!A2:B2");
+    assert.equal(body.data[1].range, "'Students'!D2:K2");
+    assert.equal(body.data[1].values[0][2], 1);
     assert.equal(update.options.headers.Authorization, "Bearer test-token");
   } finally {
     globalThis.fetch = previousFetch;
@@ -73,10 +73,12 @@ test("saved progress loads for the same LINE user and stays separate from anothe
       rows.push(JSON.parse(options.body).values[0]);
       return Response.json({ updates: { updatedRows: 1 } });
     }
-    if (options.method === "PUT") {
-      const rowNumber = Number(/A(\d+)%3AK\d+/.exec(path)?.[1]);
-      rows[rowNumber - 2] = JSON.parse(options.body).values[0];
-      return Response.json({ updatedRows: 1 });
+    if (options.method === "POST" && path.includes("values:batchUpdate")) {
+      for (const entry of JSON.parse(options.body).data) {
+        const [, column, number] = /!([AD])(\d+):/.exec(entry.range);
+        rows[Number(number) - 2].splice(column === "A" ? 0 : 3, entry.values[0].length, ...entry.values[0]);
+      }
+      return Response.json({ totalUpdatedRows: 1 });
     }
     throw new Error(`Unexpected request: ${path}`);
   };
@@ -88,6 +90,9 @@ test("saved progress loads for the same LINE user and stays separate from anothe
     assert.deepEqual(await readProgress(userId), firstProgress);
     assert.equal(await readProgress(otherUserId), null);
     await writeProgress({ userId: otherUserId, displayName: "Student B" }, secondProgress);
+    rows[0][2] = "ปวช.1/1";
+    await writeProgress({ userId, displayName: "Student A" }, firstProgress);
+    assert.equal(rows[0][2], "ปวช.1/1");
     assert.deepEqual(await readProgress(userId), firstProgress);
     assert.deepEqual(await readProgress(otherUserId), secondProgress);
     assert.equal(rows.length, 2);
