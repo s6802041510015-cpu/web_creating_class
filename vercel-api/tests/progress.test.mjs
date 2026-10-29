@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { JWT } from "google-auth-library";
 import progressApi from "../api/progress.mjs";
 import { normalizeProgress } from "../lib/progress-schema.mjs";
-import { writeProgress } from "../lib/google-sheets.mjs";
+import { readProgress, writeProgress } from "../lib/google-sheets.mjs";
 
 const userId = `U${"a".repeat(32)}`;
 const empty = { version: 1, completedLessons: [], assessments: { pre: null, post: null }, codeLabCompleted: [], workshopChecked: [] };
@@ -48,6 +48,49 @@ test("Google Sheets update preserves a teacher-assigned class and uses RAW value
     assert.equal(row[2], "ปวช.1/1");
     assert.equal(row[5], 1);
     assert.equal(update.options.headers.Authorization, "Bearer test-token");
+  } finally {
+    globalThis.fetch = previousFetch;
+    mock.restoreAll();
+    if (previousId === undefined) delete process.env.GOOGLE_SHEET_ID; else process.env.GOOGLE_SHEET_ID = previousId;
+    if (previousCredentials === undefined) delete process.env.GOOGLE_SERVICE_ACCOUNT_JSON; else process.env.GOOGLE_SERVICE_ACCOUNT_JSON = previousCredentials;
+  }
+});
+
+test("saved progress loads for the same LINE user and stays separate from another user", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousId = process.env.GOOGLE_SHEET_ID;
+  const previousCredentials = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  process.env.GOOGLE_SHEET_ID = "testspreadsheetid0123456789";
+  process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({ client_email: "robot@example.iam.gserviceaccount.com", private_key: "test" });
+  mock.method(JWT.prototype, "getAccessToken", async () => ({ token: "test-token" }));
+  const rows = [];
+  globalThis.fetch = async (url, options = {}) => {
+    const path = String(url);
+    if (path.includes("fields=sheets.properties.title")) return Response.json({ sheets: [{ properties: { title: "Students" } }] });
+    if (path.includes("A1%3AK1")) return Response.json({ values: [["LINE User ID"]] });
+    if (path.includes("A2%3AK") && !options.method) return Response.json({ values: rows });
+    if (options.method === "POST" && path.includes(":append")) {
+      rows.push(JSON.parse(options.body).values[0]);
+      return Response.json({ updates: { updatedRows: 1 } });
+    }
+    if (options.method === "PUT") {
+      const rowNumber = Number(/A(\d+)%3AK\d+/.exec(path)?.[1]);
+      rows[rowNumber - 2] = JSON.parse(options.body).values[0];
+      return Response.json({ updatedRows: 1 });
+    }
+    throw new Error(`Unexpected request: ${path}`);
+  };
+  try {
+    const otherUserId = `U${"b".repeat(32)}`;
+    const firstProgress = { ...empty, completedLessons: ["00", "01"] };
+    const secondProgress = { ...empty, codeLabCompleted: ["heading"] };
+    await writeProgress({ userId, displayName: "Student A" }, firstProgress);
+    assert.deepEqual(await readProgress(userId), firstProgress);
+    assert.equal(await readProgress(otherUserId), null);
+    await writeProgress({ userId: otherUserId, displayName: "Student B" }, secondProgress);
+    assert.deepEqual(await readProgress(userId), firstProgress);
+    assert.deepEqual(await readProgress(otherUserId), secondProgress);
+    assert.equal(rows.length, 2);
   } finally {
     globalThis.fetch = previousFetch;
     mock.restoreAll();
