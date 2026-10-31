@@ -61,3 +61,15 @@ LINE Developers ต้องตั้ง LIFF Endpoint URL เป็น `https:/
 หน้าเว็บครูไม่เปิดข้อมูลเมื่อยังไม่ได้ตั้งค่าหรือยังไม่เข้าสู่ระบบ การจัดห้องแก้เฉพาะคอลัมน์ C ของแท็บ Students และการซิงก์ของนักเรียนไม่เขียนคอลัมน์นี้ คงการแชร์ Sheet เป็น **Restricted/จำกัด** เพราะมีข้อมูลนักเรียน
 
 ในเว็บครู เลือกห้องจากตัวกรองแล้วกด **สร้างแท็บห้องนี้** ระบบจะเพิ่มแท็บของห้องใน Spreadsheet เดิมและส่งลิงก์ไปยังแท็บนั้น แท็บห้องใช้สูตร `FILTER` อ่านข้อมูลจาก `Students` จึงตามข้อมูลใหม่และการย้ายห้องโดยอัตโนมัติ การกดซ้ำใช้แท็บเดิม ควรแก้ไขข้อมูลที่เว็บครูหรือแท็บ `Students` เพราะแท็บห้องเป็นมุมมองจากสูตร
+
+## เว็บลาเรียนแยกจากเว็บบทเรียน
+
+เว็บลาอยู่ในโฟลเดอร์ `leave-app` และต้องเป็น **Vercel project ใหม่** ที่ตั้ง Root Directory เป็น `leave-app` ใช้โดเมนของตัวเอง นักเรียนเปิดจากปุ่มใน LINE OA Rich Menu ได้ตรง ไม่ต้องเข้าเว็บบทเรียน ส่วนครูเปิดเมนู **คำขอลา** ในเว็บครูเดิมที่ `/teacher/leaves`
+
+1. สร้าง **Google Sheet ไฟล์ใหม่** สำหรับการลาโดยเฉพาะ ตั้ง Share → General access เป็น **Restricted / จำกัด** แล้วแชร์อีเมล `client_email` ของ Service Account เดิมเป็น Editor คัดลอก Spreadsheet ID ระหว่าง `/d/` กับ `/edit` ใน URL ไม่ต้องสร้างแท็บเอง API จะสร้าง `LeaveStudents` และ `LeaveRequests` เมื่อใช้งานครั้งแรก
+2. ใน Vercel project **API เดิม** (`htmlweb_class`, Root Directory `vercel-api`) เพิ่ม Environment Variables สำหรับ Production: `LEAVE_GOOGLE_SHEET_ID` = ID ของ Sheet ใหม่, `LEAVE_WEB_ORIGIN` = origin ของเว็บลา เช่น `https://ชื่อโปรเจกต์.vercel.app` (ไม่มี `/` ท้าย), `LINE_MESSAGING_CHANNEL_ACCESS_TOKEN` = Channel access token ของ **Messaging API channel ที่ผูกกับ LINE OA ของนักเรียน** โดยเก็บเป็น Secret อย่าใส่ token ใน GitHub หรือในตัวแปร `VITE_...` แล้ว Redeploy API
+3. ใน LINE Developers สร้าง **LIFF app ใหม่** ใต้ LINE Login channel เดิม (`2012268768`) ตั้ง Endpoint URL เป็นโดเมนเว็บลา เปิด scope `openid` และ `profile` เก็บ LIFF ID ใหม่ โดยไม่เปลี่ยน LIFF app ของเว็บบทเรียน
+4. ใน Vercel สร้าง project ใหม่จาก repository `web_creating_class` โดยเลือก Root Directory = `leave-app`, Framework Preset = Vite ตั้ง `VITE_LEAVE_LIFF_ID` = LIFF ID ใหม่ และ `VITE_API_URL` = `https://htmlwebclass-one.vercel.app` แล้ว Deploy หากโดเมนจริงต่างจาก Endpoint ที่ตั้งในข้อ 3 ให้กลับไปแก้ Endpoint URL ให้ตรงกับโดเมนเว็บลาและ `LEAVE_WEB_ORIGIN` ให้ตรงกัน
+5. ตั้งปุ่ม **ลาเรียน** ใน LINE OA Rich Menu เป็นลิงก์ `https://liff.line.me/<LIFF ID ใหม่>` การส่งคำขอจะบันทึกใน Sheet ใหม่และขอส่งข้อความรับเรื่องไปยัง OA; เมื่อครูอนุมัติหรือไม่อนุมัติ API จะบันทึกผลและขอส่งข้อความผลไปยังนักเรียนคนเดิม การส่งข้อความอาจไม่ถึงผู้ที่บล็อก OA หรือเมื่อเกินโควตา จึงยังดูผลในเว็บลาได้
+
+ข้อมูลนักเรียนที่เคยลงทะเบียนในเว็บบทเรียนจะถูกดึงมาเติมให้อัตโนมัติจาก Sheet เดิมผ่าน LINE user ID แต่คำขอลาและรายชื่อของเว็บลาบันทึกแยกใน Sheet ใหม่ นักเรียนใหม่ที่ไม่เคยเข้าเว็บบทเรียนสามารถกรอกข้อมูลในเว็บลาครั้งแรกได้ การเปิด Sheet ให้ครูคนอื่นดูยังต้องแชร์สิทธิ์ Google Sheet ใหม่กับบัญชี Google ของครูนั้นโดยตรง

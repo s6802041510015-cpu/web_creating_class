@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -12,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
+import { TeacherLeaves } from "./TeacherLeaves";
 import "./teacher.css";
 
 type Assessment = { score: number; total: number } | null;
@@ -36,6 +38,8 @@ const apiOrigin = (import.meta.env.VITE_AI_API_URL ?? "")
   .trim()
   .replace(/\/+$/, "");
 export function TeacherPage() {
+  const location = useLocation();
+  const isLeaves = location.pathname.startsWith("/teacher/leaves");
   const sessionRef = useRef("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -228,7 +232,7 @@ export function TeacherPage() {
     }
   }
 
-  function signOut() {
+  const signOut = useCallback(() => {
     sessionRef.current = "";
     setToken("");
     setPassword("");
@@ -237,7 +241,7 @@ export function TeacherPage() {
     setSheetUrl("");
     setClassSheetLinks({});
     setError("");
-  }
+  }, []);
 
   return (
     <div className="teacher-shell">
@@ -268,12 +272,15 @@ export function TeacherPage() {
           <span className="teacher-eyebrow">
             21901-2002 · วิชา การสร้างเว็บไซต์
           </span>
-          <h1>ภาพรวมการเรียนของนักเรียน</h1>
-          <p>
-            ติดตามบทเรียน ผลแบบทดสอบ และกิจกรรมของแต่ละห้องจากข้อมูลที่บันทึกใน
-            Google Sheet
-          </p>
+          <h1>{isLeaves ? "คำขอลาเรียน" : "ภาพรวมการเรียนของนักเรียน"}</h1>
+          <p>{isLeaves
+            ? "ตรวจคำขอจากนักเรียน อนุมัติหรือไม่อนุมัติพร้อมคำชี้แจง"
+            : "ติดตามบทเรียน ผลแบบทดสอบ และกิจกรรมของแต่ละห้องจากข้อมูลที่บันทึกใน Google Sheet"}</p>
         </div>
+        {token && <nav className="teacher-section-nav" aria-label="หน้าเว็บครู">
+          <Link to="/teacher" className={!isLeaves ? "active" : ""}>ความก้าวหน้านักเรียน</Link>
+          <Link to="/teacher/leaves" className={isLeaves ? "active" : ""}>คำขอลาเรียน</Link>
+        </nav>}
         {!apiOrigin ? (
           <section className="teacher-card teacher-login">
             <h2>เว็บครูยังไม่พร้อมใช้งาน</h2>
@@ -320,7 +327,7 @@ export function TeacherPage() {
           </section>
         ) : (
           <>
-            <div className="teacher-toolbar">
+            {!isLeaves && <div className="teacher-toolbar">
               <div>
                 <span>
                   เข้าสู่ระบบ:{" "}
@@ -358,13 +365,14 @@ export function TeacherPage() {
                   <RefreshCw size={17} /> รีเฟรช
                 </button>
               </div>
-            </div>
+            </div>}
             {error && (
               <p className="teacher-error" role="alert">
                 {error}
               </p>
             )}
-            {teacher && (
+            {teacher && isLeaves && <TeacherLeaves token={token} onAuthExpired={signOut} />}
+            {teacher && !isLeaves && (
               <>
                 <div className="teacher-stats">
                   <div className="teacher-stat">

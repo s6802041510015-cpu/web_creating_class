@@ -64,6 +64,26 @@
 .teacher-intro {
   margin-bottom: 28px;
 }
+.teacher-section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: -8px 0 22px;
+}
+.teacher-section-nav a {
+  border: 1px solid var(--border-soft);
+  border-radius: 11px;
+  padding: 9px 16px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 800;
+}
+.teacher-section-nav a.active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(120deg, var(--blue), var(--purple));
+}
 .teacher-eyebrow {
   color: var(--cyan);
   font-size: 12px;
