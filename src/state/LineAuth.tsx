@@ -4,7 +4,7 @@ import type liff from "@line/liff";
 import { LoaderCircle, LogIn, RefreshCw } from "lucide-react";
 import "../styles/line-auth.css";
 
-type LineUser = { userId: string; displayName: string };
+type LineUser = { userId: string; displayName: string; pictureUrl?: string };
 type LineAuthState = {
   user: LineUser | null;
   isDemo: boolean;
@@ -72,7 +72,14 @@ export function LineAuthProvider({ children }: { children: ReactNode }) {
         const idToken = sdk.getIDToken();
         if (!idToken) throw new Error("LIFF ไม่ได้รับ ID token กรุณาเปิด scope openid ใน LINE Developers");
         const verified = await verifyUser(idToken, controller.signal);
-        if (!controller.signal.aborted) setUser(verified);
+        if (controller.signal.aborted) return;
+        setUser(verified);
+        // The photo is display-only. A missing photo or denied profile scope must not block login.
+        void sdk.getProfile().then((profile) => {
+          if (!controller.signal.aborted && profile.userId === verified.userId && profile.pictureUrl) {
+            setUser({ ...verified, pictureUrl: profile.pictureUrl });
+          }
+        }).catch(() => {});
       } catch (cause) {
         if (controller.signal.aborted) return;
         setError(cause instanceof Error ? cause.message : "เชื่อมต่อ LINE ไม่สำเร็จ");

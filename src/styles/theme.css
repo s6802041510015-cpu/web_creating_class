@@ -221,9 +221,16 @@ h3 {
   width: 34px;
   height: 34px;
   flex: none;
-  border-radius: 10px;
+  border-radius: 50%;
+  overflow: hidden;
   color: #c8c1ff;
   background: #20265c;
+}
+.profile__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .profile strong,
 .profile small {

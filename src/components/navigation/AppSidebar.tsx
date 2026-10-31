@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { UserRound } from "lucide-react";
 import { BrandLogo } from "../brand/BrandLogo";
@@ -7,6 +8,8 @@ import { useLineAuth } from "../../state/LineAuth";
 
 export function AppSidebar() {
   const { user, isDemo } = useLineAuth();
+  const [failedPictureUrl, setFailedPictureUrl] = useState<string | null>(null);
+  const pictureUrl = user?.pictureUrl && user.pictureUrl !== failedPictureUrl ? user.pictureUrl : null;
   return (
     <aside className="sidebar" aria-label="เมนูหลัก">
       <div className="sidebar__top">
@@ -31,7 +34,9 @@ export function AppSidebar() {
         <ThemeToggle />
         <div className="profile">
           <span className="profile__avatar">
-            <UserRound size={19} aria-hidden="true" />
+            {pictureUrl
+              ? <img src={pictureUrl} alt="" referrerPolicy="no-referrer" onError={() => setFailedPictureUrl(pictureUrl)} />
+              : <UserRound size={19} aria-hidden="true" />}
           </span>
           <span>
             <strong>{user?.displayName ?? "ผู้เรียน WebQuest"}</strong>
