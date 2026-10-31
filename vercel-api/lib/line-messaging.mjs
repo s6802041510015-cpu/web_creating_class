@@ -1,5 +1,6 @@
 const typeLabels = { sick: "ลาป่วย", personal: "ลากิจ", other: "ลาอื่น ๆ" };
 const statusLabels = { pending: "รอครูพิจารณา", approved: "อนุมัติ", rejected: "ไม่อนุมัติ" };
+const periodLabels = { full: "เต็มวัน", morning: "ช่วงเช้า", afternoon: "ช่วงบ่าย", custom: "ระบุเวลาเอง" };
 
 export async function notifyLeave(request, kind) {
   const token = process.env.LINE_MESSAGING_CHANNEL_ACCESS_TOKEN?.trim();
@@ -8,9 +9,12 @@ export async function notifyLeave(request, kind) {
   const title = kind === "receipt" ? "รับคำขอลาแล้ว" : "ผลการพิจารณาคำขอลา";
   const accent = kind === "receipt" ? "#4168dc" : request.status === "approved" ? "#19876a" : "#c65565";
   const date = request.startDate === request.endDate ? request.startDate : `${request.startDate} – ${request.endDate}`;
+  const period = request.period === "custom" && request.startTime && request.endTime
+    ? `${request.startTime}–${request.endTime} น.` : periodLabels[request.period] ?? "เต็มวัน";
   const lines = [
     { type: "text", text: `รหัสคำขอ: ${request.id.slice(0, 8).toUpperCase()}`, size: "sm", color: "#667085" },
     { type: "text", text: `${typeLabels[request.type] ?? "ลาเรียน"} · ${date}`, size: "md", weight: "bold", wrap: true, margin: "md", color: "#172038" },
+    { type: "text", text: `ช่วงเวลา: ${period}`, size: "sm", color: "#465268", margin: "sm" },
     { type: "text", text: `สถานะ: ${statusLabels[request.status] ?? request.status}`, size: "md", color: accent, margin: "md", weight: "bold" },
   ];
   if (kind === "decision" && request.teacherReason) lines.push({

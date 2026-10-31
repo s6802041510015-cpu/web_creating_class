@@ -10,20 +10,27 @@ import {
 type Profile = { studentId: string; fullName: string; number: string; className: string };
 type LeaveRequest = Profile & {
   id: string; type: string; startDate: string; endDate: string; period: string;
+  startTime: string; endTime: string;
   reason: string; status: string; submittedAt: string; reviewedAt: string;
   reviewer: string; teacherReason: string;
 };
 type View = "home" | "form" | "history";
 type AuthState = "loading" | "login" | "ready" | "demo" | "error";
-type FormData = { type: string; startDate: string; endDate: string; period: string; reason: string };
+type FormData = { type: string; startDate: string; endDate: string; period: string;
+  startTime: string; endTime: string; reason: string };
 
 const liffId = (import.meta.env.VITE_LEAVE_LIFF_ID ?? "").trim();
 const apiOrigin = (import.meta.env.VITE_API_URL ?? "").trim().replace(/\/+$/, "");
 const emptyProfile: Profile = { studentId: "", fullName: "", number: "", className: "" };
 const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-const initialForm: FormData = { type: "sick", startDate: today, endDate: today, period: "full", reason: "" };
+const initialForm: FormData = { type: "sick", startDate: today, endDate: today, period: "full",
+  startTime: "", endTime: "", reason: "" };
 const typeLabel: Record<string, string> = { sick: "ลาป่วย", personal: "ลากิจ", other: "อื่น ๆ" };
-const periodLabel: Record<string, string> = { full: "เต็มวัน", morning: "ช่วงเช้า", afternoon: "ช่วงบ่าย" };
+const periodLabel: Record<string, string> = { full: "เต็มวัน", morning: "ช่วงเช้า", afternoon: "ช่วงบ่าย", custom: "ระบุเวลาเอง" };
+function periodText(value: { period: string; startTime: string; endTime: string }) {
+  return value.period === "custom" && value.startTime && value.endTime
+    ? `${value.startTime}–${value.endTime} น.` : periodLabel[value.period] ?? "เต็มวัน";
+}
 const statusLabel: Record<string, string> = { pending: "รอพิจารณา", approved: "อนุมัติแล้ว", rejected: "ไม่อนุมัติ" };
 let liffInit: Promise<typeof liff> | null = null;
 
@@ -147,6 +154,7 @@ export default function App() {
       const next = { ...current, [key]: value };
       if (key === "startDate" && next.endDate < value) next.endDate = value;
       if (next.startDate !== next.endDate) next.period = "full";
+      if (next.period !== "custom") { next.startTime = ""; next.endTime = ""; }
       return next;
     });
     setReviewing(false);
@@ -158,6 +166,10 @@ export default function App() {
     setError("");
     if (form.endDate < form.startDate || (form.period !== "full" && form.startDate !== form.endDate)) {
       setError("กรุณาตรวจวันที่และช่วงเวลาที่ลา");
+      return;
+    }
+    if (form.period === "custom" && (!form.startTime || !form.endTime || form.startTime >= form.endTime)) {
+      setError("กรุณาระบุเวลาเริ่มและเวลาสิ้นสุด โดยเวลาสิ้นสุดต้องหลังเวลาเริ่ม");
       return;
     }
     if (form.reason.trim().length < 5) {
@@ -302,7 +314,7 @@ export default function App() {
               <div className="review-grid"><Detail label="รหัสนักเรียน" value={profile.studentId} /><Detail label="ชื่อ-นามสกุล" value={profile.fullName} /><Detail label="เลขที่" value={profile.number} /><Detail label="ห้องเรียน" value={profile.className} /></div>
               <div className="divider" />
               <div className="form-section-title"><span>02</span><div><h2>รายละเอียดการลา</h2><p>ข้อมูลที่จะส่งให้ครู</p></div></div>
-              <div className="review-grid"><Detail label="ประเภท" value={typeLabel[form.type]} /><Detail label="วันที่ลา" value={form.startDate === form.endDate ? dateThai(form.startDate) : `${dateThai(form.startDate)} – ${dateThai(form.endDate)}`} /><Detail label="ช่วงเวลา" value={periodLabel[form.period]} /><Detail label="เหตุผล" value={form.reason} /></div>
+              <div className="review-grid"><Detail label="ประเภท" value={typeLabel[form.type]} /><Detail label="วันที่ลา" value={form.startDate === form.endDate ? dateThai(form.startDate) : `${dateThai(form.startDate)} – ${dateThai(form.endDate)}`} /><Detail label="ช่วงเวลา" value={periodText(form)} /><Detail label="เหตุผล" value={form.reason} /></div>
               <div className="form-footer"><button className="secondary-button" type="button" onClick={() => setReviewing(false)}>แก้ไขข้อมูล</button>
                 <button className="primary-button" type="button" onClick={() => void submit()} disabled={busy || auth === "demo"}>
                   {busy ? "กำลังส่งคำขอ..." : "ยืนยันส่งคำขอ"} <Send size={17} /></button></div>
@@ -324,9 +336,15 @@ export default function App() {
                 <div className="field-grid"><label>วันที่เริ่ม <em>*</em><input type="date" value={form.startDate} onChange={(e) => updateForm("startDate", e.target.value)} required /></label>
                   <label>วันที่สิ้นสุด <em>*</em><input type="date" min={form.startDate} value={form.endDate} onChange={(e) => updateForm("endDate", e.target.value)} required /></label></div>
                 <fieldset><legend>ช่วงเวลา <em>*</em></legend><div className="period-options">
-                  {(["full", "morning", "afternoon"] as const).map((period) => <label key={period} className={form.period === period ? "selected" : ""}>
+                  {(["full", "morning", "afternoon", "custom"] as const).map((period) => <label key={period} className={form.period === period ? "selected" : ""}>
                     <input type="radio" name="period" value={period} checked={form.period === period} disabled={period !== "full" && form.startDate !== form.endDate} onChange={() => updateForm("period", period)} />{periodLabel[period]}
-                  </label>)}</div></fieldset>
+                  </label>)}</div>
+                  {form.period === "custom" && <div className="field-grid custom-time-fields">
+                    <label>เวลาเริ่ม <em>*</em><input type="time" value={form.startTime} onChange={(e) => updateForm("startTime", e.target.value)} required /></label>
+                    <label>เวลาสิ้นสุด <em>*</em><input type="time" value={form.endTime} onChange={(e) => updateForm("endTime", e.target.value)} required /></label>
+                  </div>}
+                  {form.startDate !== form.endDate && <small>การระบุเวลาใช้ได้เฉพาะการลาในวันเดียว</small>}
+                </fieldset>
                 <label>เหตุผลในการลา <em>*</em><textarea value={form.reason} onChange={(e) => updateForm("reason", e.target.value)} required minLength={5} maxLength={1000} rows={4} placeholder="อธิบายเหตุผลให้ครูทราบโดยสรุป" /><small>แสดงให้ครูผู้ดูแลคำขอลาเท่านั้น</small></label>
               </div>
               <div className="form-footer"><span><ShieldCheck size={18} /> ส่งข้อมูลผ่านระบบที่ตรวจสอบบัญชี LINE</span>
@@ -366,7 +384,7 @@ function Detail({ label, value }: { label: string; value: string }) {
 function RequestCard({ request, compact = false }: { request: LeaveRequest; compact?: boolean }) {
   return <article className={`request-card request-card--${request.status}`}>
     <div className="request-main"><span className="request-symbol">{request.type === "sick" ? <HeartPulse size={21} /> : <CalendarDays size={21} />}</span>
-      <div><strong>{typeLabel[request.type] ?? "ลาเรียน"}</strong><small>{dateThai(request.startDate)}{request.endDate !== request.startDate ? ` – ${dateThai(request.endDate)}` : ""} · {periodLabel[request.period] ?? "เต็มวัน"}</small></div>
+      <div><strong>{typeLabel[request.type] ?? "ลาเรียน"}</strong><small>{dateThai(request.startDate)}{request.endDate !== request.startDate ? ` – ${dateThai(request.endDate)}` : ""} · {periodText(request)}</small></div>
       <span className={`status-pill status-pill--${request.status}`}><StatusIcon status={request.status} /> {statusLabel[request.status] ?? request.status}</span></div>
     {!compact && <div className="request-detail"><p>{request.reason}</p>
       {request.teacherReason && <div className="teacher-note"><MessageCircle size={18} /><span><strong>คำชี้แจงจากครู</strong>{request.teacherReason}</span></div>}

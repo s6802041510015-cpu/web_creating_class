@@ -10,7 +10,8 @@ const userId = `U${"a".repeat(32)}`;
 const idToken = "x".repeat(120);
 const requestKey = "ed7bda13-8b0a-4e82-9234-f5405d178650";
 const profile = { studentId: "6802041510015", fullName: "สมชาย ใจดี", number: "12", className: "ปวช.1/1" };
-const leave = { requestKey, profile, type: "sick", startDate: "2026-10-31", endDate: "2026-10-31", period: "full", reason: "มีอาการป่วยและต้องพักรักษาตัว" };
+const leave = { requestKey, profile, type: "sick", startDate: "2026-10-31", endDate: "2026-10-31",
+  period: "custom", startTime: "09:00", endTime: "11:00", reason: "มีอาการป่วยและต้องพักรักษาตัว" };
 const leaveOrigin = "https://webhtml-leave.vercel.app";
 const teacherOrigin = "https://s6802041510015-cpu.github.io";
 
@@ -31,6 +32,11 @@ test("leave input rejects invalid dates, long ranges and partial multi-day reque
   assert.throws(() => normalizeLeave({ ...leave, startDate: "2026-02-30" }), /INVALID_LEAVE/);
   assert.throws(() => normalizeLeave({ ...leave, endDate: "2026-12-31" }), /INVALID_LEAVE/);
   assert.throws(() => normalizeLeave({ ...leave, endDate: "2026-11-01", period: "morning" }), /INVALID_LEAVE/);
+  assert.throws(() => normalizeLeave({ ...leave, endDate: "2026-11-01" }), /INVALID_LEAVE/);
+  assert.throws(() => normalizeLeave({ ...leave, startTime: "11:00" }), /INVALID_LEAVE/);
+  assert.throws(() => normalizeLeave({ ...leave, endTime: "25:00" }), /INVALID_LEAVE/);
+  assert.throws(() => normalizeLeave({ ...leave, startTime: "" }), /INVALID_LEAVE/);
+  assert.deepEqual(normalizeLeave({ ...leave, period: "full" }).startTime, "");
 });
 
 test("separate leave sheet receives request, teacher decision and LINE notices", async () => {
@@ -66,10 +72,10 @@ test("separate leave sheet receives request, teacher decision and LINE notices",
     if (path.includes("fields=sheets.properties.title")) return Response.json({ sheets: [
       { properties: { title: "LeaveStudents" } }, { properties: { title: "LeaveRequests" } },
     ] });
-    if (path.includes("A1%3AF1") || path.includes("A1%3AP1")) return Response.json({ values: [] });
+    if (path.includes("A1%3AF1") || path.includes("A1%3AR1")) return Response.json({ values: [] });
     if (options.method === "PUT" && path.includes("A1%3A")) return Response.json({ updatedRows: 1 });
     if (path.includes("A2%3AF")) return Response.json({ values: profiles });
-    if (path.includes("A2%3AP")) return Response.json({ values: requests });
+    if (path.includes("A2%3AR")) return Response.json({ values: requests });
     if (options.method === "POST" && path.includes(":append")) {
       const data = JSON.parse(options.body);
       sheetWrites.push(data);
@@ -94,25 +100,32 @@ test("separate leave sheet receives request, teacher decision and LINE notices",
     assert.equal(submitted.status, 201);
     const result = await submitted.json();
     assert.equal(result.request.status, "pending");
+    assert.equal(result.request.startTime, "09:00");
+    assert.equal(result.request.endTime, "11:00");
     assert.equal(result.notificationRequested, true);
     assert.equal(profiles.length, 1);
     assert.equal(requests.length, 1);
-    assert.equal(sheetWrites[1].range, "'LeaveRequests'!A:P");
+    assert.equal(sheetWrites[1].range, "'LeaveRequests'!A:R");
     assert.equal(sheetWrites[1].values[0][11], "pending");
+    assert.deepEqual(sheetWrites[1].values[0].slice(16), ["09:00", "11:00"]);
     assert.equal(pushes[0].to, userId);
+    assert.match(JSON.stringify(pushes[0]), /09:00–11:00 น\./);
     const repeated = await leaveApi.fetch(request("/api/leave", "POST", leave, idToken, leaveOrigin));
     assert.equal(repeated.status, 200);
     assert.equal(requests.length, 1);
     assert.equal(pushes.length, 1);
     const inbox = await teacherLeavesApi.fetch(request("/api/teacher/leaves", "GET", null, teacherToken, teacherOrigin));
     assert.equal(inbox.status, 200);
-    assert.equal((await inbox.json()).sheetUrl, "https://docs.google.com/spreadsheets/d/leave-spreadsheet-id-0123456789/edit");
+    const inboxData = await inbox.json();
+    assert.equal(inboxData.sheetUrl, "https://docs.google.com/spreadsheets/d/leave-spreadsheet-id-0123456789/edit");
+    assert.equal(inboxData.requests[0].startTime, "09:00");
     const decision = await teacherLeavesApi.fetch(request("/api/teacher/leaves", "PUT", {
       id: requestKey, status: "rejected", teacherReason: "กรุณาแจ้งครูประจำชั้นก่อน",
     }, teacherToken, teacherOrigin));
     assert.equal(decision.status, 200);
     assert.equal((await decision.json()).notificationRequested, true);
     assert.equal(pushes.length, 2);
+    assert.match(JSON.stringify(pushes[1]), /09:00–11:00 น\./);
     assert.equal((await teacherLeavesApi.fetch(request("/api/teacher/leaves", "PUT", {
       id: requestKey, status: "approved", teacherReason: "",
     }, teacherToken, teacherOrigin))).status, 409);

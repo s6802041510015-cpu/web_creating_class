@@ -8,6 +8,7 @@ const requestHeaders = [
   "รหัสคำขอ", "LINE User ID", "รหัสนักเรียน", "ชื่อ-นามสกุล", "เลขที่", "ห้องเรียน",
   "ประเภท", "วันที่เริ่ม", "วันที่สิ้นสุด", "ช่วงเวลา", "เหตุผล", "สถานะ",
   "ส่งคำขอเมื่อ", "พิจารณาเมื่อ", "ครูผู้พิจารณา", "เหตุผลจากครู",
+  "เวลาเริ่ม", "เวลาสิ้นสุด",
 ];
 let authClient;
 let initialization;
@@ -62,7 +63,7 @@ async function setupSheet() {
         if (!refreshed.sheets?.some((sheet) => sheet.properties?.title === title)) throw error;
       }
     }
-    const last = title === profileTab ? "F" : "P";
+    const last = title === profileTab ? "F" : "R";
     const heading = await sheets(`${range(title, `A1:${last}1`)}?valueRenderOption=UNFORMATTED_VALUE`);
     if (headers.some((value, index) => heading.values?.[0]?.[index] !== value)) {
       await sheets(`${range(title, `A1:${last}1`)}?valueInputOption=RAW`, {
@@ -127,17 +128,22 @@ export function normalizeLeave(input) {
   const startDate = typeof input?.startDate === "string" ? input.startDate : "";
   const endDate = typeof input?.endDate === "string" ? input.endDate : "";
   const period = typeof input?.period === "string" ? input.period : "";
+  const startTime = typeof input?.startTime === "string" ? input.startTime : "";
+  const endTime = typeof input?.endTime === "string" ? input.endTime : "";
   const reason = typeof input?.reason === "string" ? input.reason.trim() : "";
   const start = dateValue(startDate);
   const end = dateValue(endDate);
   if (!["sick", "personal", "other"].includes(type) || !start || !end ||
       end < start || end.getTime() - start.getTime() > 29 * 86400000 ||
-      !["full", "morning", "afternoon"].includes(period) ||
+      !["full", "morning", "afternoon", "custom"].includes(period) ||
       (period !== "full" && startDate !== endDate) ||
+      (period === "custom" && (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(startTime) ||
+        !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(endTime) || startTime >= endTime)) ||
       reason.length < 5 || reason.length > 1000 || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(reason)) {
     throw new Error("INVALID_LEAVE");
   }
-  return { type, startDate, endDate, period, reason };
+  return { type, startDate, endDate, period, reason,
+    startTime: period === "custom" ? startTime : "", endTime: period === "custom" ? endTime : "" };
 }
 
 function requestFromRow(row) {
@@ -148,11 +154,12 @@ function requestFromRow(row) {
     period: String(row[9] ?? ""), reason: String(row[10] ?? ""), status: String(row[11] ?? ""),
     submittedAt: String(row[12] ?? ""), reviewedAt: String(row[13] ?? ""),
     reviewer: String(row[14] ?? ""), teacherReason: String(row[15] ?? ""),
+    startTime: String(row[16] ?? ""), endTime: String(row[17] ?? ""),
   };
 }
 
 export async function listLeaveRequests(userId) {
-  const rows = await readRows(requestTab, "P");
+  const rows = await readRows(requestTab, "R");
   return rows.filter((row) => row[0] && (!userId || row[1] === userId))
     .map(requestFromRow).reverse();
 }
@@ -164,25 +171,25 @@ export async function createLeaveRequest(user, input) {
     throw new Error("INVALID_LEAVE");
   const existing = (await listLeaveRequests(user.userId)).find((item) => item.id === requestKey);
   if (existing) return { request: existing, created: false };
-  const all = await readRows(requestTab, "P");
+  const all = await readRows(requestTab, "R");
   if (all.some((row) => row[0] === requestKey)) throw new Error("INVALID_LEAVE");
   const profile = await getLeaveProfile(user.userId) ?? normalizeRegistration(input?.profile);
   await persistProfile(user.userId, profile);
   const submittedAt = new Date().toISOString();
   const id = requestKey;
-  await sheets(`${range(requestTab, "A:P")}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+  await sheets(`${range(requestTab, "A:R")}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
     method: "POST",
-    body: JSON.stringify({ range: `'${requestTab}'!A:P`, majorDimension: "ROWS", values: [[
+    body: JSON.stringify({ range: `'${requestTab}'!A:R`, majorDimension: "ROWS", values: [[
       id, user.userId, profile.studentId, profile.fullName, profile.number, profile.className,
       leave.type, leave.startDate, leave.endDate, leave.period, leave.reason, "pending",
-      submittedAt, "", "", "",
+      submittedAt, "", "", "", leave.startTime, leave.endTime,
     ]] }),
   });
   return { request: { id, userId: user.userId, ...profile, ...leave, status: "pending", submittedAt, reviewedAt: "", reviewer: "", teacherReason: "" }, created: true };
 }
 
 export async function reviewLeaveRequest(id, status, teacherReason, reviewer) {
-  const rows = await readRows(requestTab, "P");
+  const rows = await readRows(requestTab, "R");
   const index = rows.findIndex((row) => row[0] === id);
   if (index < 0) return null;
   const existing = requestFromRow(rows[index]);

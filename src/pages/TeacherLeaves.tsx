@@ -8,12 +8,16 @@ import "./teacher-leaves.css";
 type LeaveRequest = {
   id: string; userId: string; studentId: string; fullName: string; number: string;
   className: string; type: string; startDate: string; endDate: string;
-  period: string; reason: string; status: string; submittedAt: string;
+  period: string; startTime: string; endTime: string; reason: string; status: string; submittedAt: string;
   reviewedAt: string; reviewer: string; teacherReason: string;
 };
 type Decision = { id: string; status: "approved" | "rejected"; reason: string };
 const typeLabels: Record<string, string> = { sick: "ลาป่วย", personal: "ลากิจ", other: "อื่น ๆ" };
-const periodLabels: Record<string, string> = { full: "เต็มวัน", morning: "ช่วงเช้า", afternoon: "ช่วงบ่าย" };
+const periodLabels: Record<string, string> = { full: "เต็มวัน", morning: "ช่วงเช้า", afternoon: "ช่วงบ่าย", custom: "ระบุเวลาเอง" };
+function periodText(item: LeaveRequest) {
+  return item.period === "custom" && item.startTime && item.endTime
+    ? `${item.startTime}–${item.endTime} น.` : periodLabels[item.period] ?? "เต็มวัน";
+}
 const apiOrigin = (import.meta.env.VITE_AI_API_URL ?? "").trim().replace(/\/+$/, "");
 function dateThai(value: string) {
   const date = new Date(`${value}T12:00:00+07:00`);
@@ -138,7 +142,7 @@ export function TeacherLeaves({ token, onAuthExpired }: { token: string; onAuthE
             </span>
           </div>
           <div className="teacher-leave-card__details">
-            <span><CalendarDays size={16} /> {typeLabels[item.type] ?? "ลาเรียน"} · {dateThai(item.startDate)}{item.endDate !== item.startDate ? ` – ${dateThai(item.endDate)}` : ""} · {periodLabels[item.period] ?? "เต็มวัน"}</span>
+            <span><CalendarDays size={16} /> {typeLabels[item.type] ?? "ลาเรียน"} · {dateThai(item.startDate)}{item.endDate !== item.startDate ? ` – ${dateThai(item.endDate)}` : ""} · {periodText(item)}</span>
             <p>{item.reason}</p>
           </div>
           <div className="teacher-leave-card__bottom">
