@@ -44,6 +44,8 @@ test("uses server-side key and replaces a full Workshop HTML answer with guidanc
     const body = JSON.parse(outgoing.body);
     assert.match(body.contents.at(-1).parts[0].text, /<h1>สวัสดี<\/h1>/);
     assert.match(body.systemInstruction.parts[0].text, /ห้ามส่งโค้ดสำเร็จรูป/);
+    assert.equal(body.generationConfig.thinkingConfig.thinkingLevel, "low");
+    assert.equal(body.generationConfig.temperature, undefined);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.GEMINI_API_KEY;

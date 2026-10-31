@@ -85,7 +85,7 @@ export default {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemInstruction }] },
           contents: [...cleanHistory(input.history), { role: "user", parts: [{ text: currentQuestion }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 900 },
+          generationConfig: { thinkingConfig: { thinkingLevel: "low" }, maxOutputTokens: 2048 },
         }),
         signal: AbortSignal.timeout(23_000),
       });
