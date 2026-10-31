@@ -72,6 +72,15 @@ export default function App() {
   const [success, setSuccess] = useState("");
   const [retry, setRetry] = useState(0);
   const pendingKey = useRef("");
+  const idToken = useRef("");
+
+  const currentIdToken = useCallback(async () => {
+    const sdk = await initializeLiff();
+    const token = sdk.getIDToken() || idToken.current;
+    if (!token) throw new Error("เซสชัน LINE ไม่พร้อม กรุณาเปิดหน้าแจ้งลาจาก Rich Menu อีกครั้ง");
+    idToken.current = token;
+    return token;
+  }, []);
 
   const load = useCallback(async (token: string, signal?: AbortSignal) => {
     if (!apiOrigin) throw new Error("ยังไม่ได้ตั้งค่า URL ของ API");
@@ -107,6 +116,7 @@ export default function App() {
         if (!token) throw new Error("LIFF ไม่ได้รับสิทธิ์ openid กรุณาตรวจการตั้งค่า");
         await load(token, controller.signal);
         if (controller.signal.aborted) return;
+        idToken.current = token;
         setAuth("ready");
         void sdk.getProfile().then((data) => {
           if (!controller.signal.aborted && data.pictureUrl) setPictureUrl(data.pictureUrl);
@@ -125,9 +135,7 @@ export default function App() {
     setBusy(true);
     setError("");
     try {
-      const sdk = await initializeLiff();
-      const token = sdk.getIDToken();
-      if (!token) throw new Error("กรุณาเข้าสู่ระบบ LINE อีกครั้ง");
+      const token = await currentIdToken();
       await load(token);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "รีเฟรชข้อมูลไม่ได้");
@@ -165,9 +173,7 @@ export default function App() {
     setBusy(true);
     setError("");
     try {
-      const sdk = await initializeLiff();
-      const token = sdk.getIDToken();
-      if (!token) throw new Error("กรุณาเข้าสู่ระบบ LINE อีกครั้ง");
+      const token = await currentIdToken();
       if (!pendingKey.current) pendingKey.current = crypto.randomUUID();
       const response = await fetch(`${apiOrigin}/api/leave`, {
         method: "POST",
@@ -178,6 +184,10 @@ export default function App() {
       const result = await response.json().catch(() => null) as {
         request?: LeaveRequest; notificationRequested?: boolean; error?: string;
       } | null;
+      if (response.status === 401) {
+        idToken.current = "";
+        throw new Error("เซสชัน LINE หมดอายุ กรุณาเปิดหน้าแจ้งลาจาก Rich Menu อีกครั้ง");
+      }
       if (!response.ok || !result?.request) throw new Error(result?.error || "ส่งคำขอลาไม่สำเร็จ");
       pendingKey.current = "";
       await load(token);
