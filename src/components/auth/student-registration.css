@@ -1,0 +1,12 @@
+.student-registration { width: min(100%, 540px); }
+.student-registration form { margin-top: 22px; text-align: left; }
+.student-registration label { display: grid; gap: 7px; margin-top: 14px; color: var(--text-primary); font-size: 14px; font-weight: 700; }
+.student-registration input { width: 100%; min-height: 46px; padding: 10px 13px; border: 1px solid var(--border-soft); border-radius: 12px; outline: none; background: var(--surface-elevated); color: var(--text-primary); font: inherit; font-weight: 500; }
+.student-registration input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(30, 199, 238, .16); }
+.student-registration input:disabled { opacity: .65; }
+.student-registration__row { display: grid; grid-template-columns: minmax(110px, .6fr) minmax(0, 1.4fr); gap: 12px; }
+.student-registration .student-registration__note { margin: 18px 0 0; font-size: 12px; line-height: 1.6; text-align: left; }
+.student-registration .line-auth__error { margin: 12px 0 0; font-size: 13px; }
+.student-registration .line-auth__button { width: 100%; margin-top: 18px; cursor: pointer; }
+.student-registration .line-auth__button:disabled { cursor: wait; opacity: .7; }
+@media (max-width: 430px) { .student-registration__row { grid-template-columns: 1fr; gap: 0; } }

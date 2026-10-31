@@ -7,6 +7,7 @@ import { readProgress, writeProgress } from "../lib/google-sheets.mjs";
 
 const userId = `U${"a".repeat(32)}`;
 const empty = { version: 1, completedLessons: [], assessments: { pre: null, post: null }, codeLabCompleted: [], workshopChecked: [] };
+const heading = ["LINE User ID", ...Array(10).fill(""), "รหัสนักเรียน", "ชื่อ-นามสกุล", "เลขที่", "ชั้นที่นักเรียนระบุ"];
 
 test("progress schema keeps known IDs and rejects a post-test without prerequisites", () => {
   assert.deepEqual(normalizeProgress({ ...empty, completedLessons: ["00", "00", "fake"], codeLabCompleted: ["heading", "unknown"] }), {
@@ -35,8 +36,8 @@ test("Google Sheets update preserves a teacher-assigned class and uses RAW value
     const path = String(url);
     if (options.method === "POST" && path.includes("values:batchUpdate")) { update = { url: path, options }; return Response.json({ totalUpdatedRows: 1 }); }
     if (path.includes("fields=sheets.properties.title")) return Response.json({ sheets: [{ properties: { title: "Students" } }] });
-    if (path.includes("A1%3AK1")) return Response.json({ values: [["LINE User ID"]] });
-    if (path.includes("A2%3AK")) return Response.json({ values: [[userId, "Old name", "ปวช.1/1", "", "", 0, "", 0, 0, "", JSON.stringify(empty)]] });
+    if (path.includes("A1%3AO1")) return Response.json({ values: [heading] });
+    if (path.includes("A2%3AO")) return Response.json({ values: [[userId, "Old name", "ปวช.1/1", "", "", 0, "", 0, 0, "", JSON.stringify(empty)]] });
     throw new Error(`Unexpected request: ${path}`);
   };
   try {
@@ -67,8 +68,8 @@ test("saved progress loads for the same LINE user and stays separate from anothe
   globalThis.fetch = async (url, options = {}) => {
     const path = String(url);
     if (path.includes("fields=sheets.properties.title")) return Response.json({ sheets: [{ properties: { title: "Students" } }] });
-    if (path.includes("A1%3AK1")) return Response.json({ values: [["LINE User ID"]] });
-    if (path.includes("A2%3AK") && !options.method) return Response.json({ values: rows });
+    if (path.includes("A1%3AO1")) return Response.json({ values: [heading] });
+    if (path.includes("A2%3AO") && !options.method) return Response.json({ values: rows });
     if (options.method === "POST" && path.includes(":append")) {
       rows.push(JSON.parse(options.body).values[0]);
       return Response.json({ updates: { updatedRows: 1 } });

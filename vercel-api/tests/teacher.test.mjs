@@ -5,6 +5,7 @@ import teacherApi from "../api/teacher.mjs";
 
 const origin = "https://s6802041510015-cpu.github.io";
 const userId = `U${"a".repeat(32)}`;
+const heading = ["LINE User ID", ...Array(10).fill(""), "รหัสนักเรียน", "ชื่อ-นามสกุล", "เลขที่", "ชั้นที่นักเรียนระบุ"];
 const progress = {
   version: 1,
   completedLessons: ["00"],
@@ -81,9 +82,9 @@ test("teacher API verifies allowlisted account, returns students, and updates on
     const path = String(url);
     if (path.includes("fields=sheets.properties.title"))
       return Response.json({ sheets: [{ properties: { title: "Students" } }] });
-    if (path.includes("A1%3AK1"))
-      return Response.json({ values: [["LINE User ID"]] });
-    if (path.includes("A2%3AK")) return Response.json({ values: rows });
+    if (path.includes("A1%3AO1"))
+      return Response.json({ values: [heading] });
+    if (path.includes("A2%3AO")) return Response.json({ values: rows });
     if (options.method === "PUT") {
       classWrite = { path, body: JSON.parse(options.body) };
       return Response.json({ updatedRows: 1 });

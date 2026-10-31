@@ -2,7 +2,7 @@ import { JWT } from "google-auth-library";
 import { emptyProgress, normalizeProgress } from "./progress-schema.mjs";
 
 const tab = "Students";
-const headers = ["LINE User ID", "ชื่อ LINE", "ห้องเรียน", "ก่อนเรียน", "หลังเรียน", "บทที่เรียนจบ", "รหัสบท", "Code Lab", "Workshop", "อัปเดตล่าสุด", "ข้อมูลระบบ"];
+const headers = ["LINE User ID", "ชื่อ LINE", "ห้องเรียน", "ก่อนเรียน", "หลังเรียน", "บทที่เรียนจบ", "รหัสบท", "Code Lab", "Workshop", "อัปเดตล่าสุด", "ข้อมูลระบบ", "รหัสนักเรียน", "ชื่อ-นามสกุล", "เลขที่", "ชั้นที่นักเรียนระบุ"];
 let authClient;
 let initialization;
 
@@ -56,10 +56,14 @@ async function setupSheet() {
       if (!refreshed.sheets?.some((sheet) => sheet.properties?.title === tab)) throw error;
     }
   }
-  const heading = await sheets(`${range("A1:K1")}?valueRenderOption=UNFORMATTED_VALUE`);
+  const heading = await sheets(`${range("A1:O1")}?valueRenderOption=UNFORMATTED_VALUE`);
   if (heading.values?.[0]?.[0] !== headers[0]) {
-    await sheets(`${range("A1:K1")}?valueInputOption=RAW`, {
-      method: "PUT", body: JSON.stringify({ range: `'${tab}'!A1:K1`, majorDimension: "ROWS", values: [headers] }),
+    await sheets(`${range("A1:O1")}?valueInputOption=RAW`, {
+      method: "PUT", body: JSON.stringify({ range: `'${tab}'!A1:O1`, majorDimension: "ROWS", values: [headers] }),
+    });
+  } else if (headers.slice(11).some((value, index) => heading.values?.[0]?.[index + 11] !== value)) {
+    await sheets(`${range("L1:O1")}?valueInputOption=RAW`, {
+      method: "PUT", body: JSON.stringify({ range: `'${tab}'!L1:O1`, majorDimension: "ROWS", values: [headers.slice(11)] }),
     });
   }
 }
@@ -74,7 +78,7 @@ async function initialize() {
 
 async function rows() {
   await initialize();
-  const result = await sheets(`${range("A2:K")}?valueRenderOption=UNFORMATTED_VALUE`);
+  const result = await sheets(`${range("A2:O")}?valueRenderOption=UNFORMATTED_VALUE`);
   return result.values ?? [];
 }
 
@@ -87,7 +91,62 @@ function rowProgress(row) {
 export async function readProgress(userId) {
   const all = await rows();
   const index = all.findIndex((row) => row[0] === userId);
-  return index < 0 ? null : rowProgress(all[index]);
+  return index < 0 || !all[index][10] ? null : rowProgress(all[index]);
+}
+
+function registrationFromRow(row) {
+  if (!row?.[11] || !row?.[12] || !row?.[13] || !row?.[14]) return null;
+  return {
+    studentId: String(row[11]), fullName: String(row[12]),
+    number: String(row[13]), className: String(row[14]),
+  };
+}
+
+export function normalizeRegistration(input) {
+  const studentId = typeof input?.studentId === "string" ? input.studentId.trim() : "";
+  const rawName = typeof input?.fullName === "string" ? input.fullName.trim() : "";
+  const fullName = rawName.replace(/ +/g, " ");
+  const number = typeof input?.number === "string" ? input.number.trim() : "";
+  const className = typeof input?.className === "string" ? input.className.trim() : "";
+  if (!/^\d{5,20}$/.test(studentId) || fullName.length < 2 || fullName.length > 100 || /[\r\n\t]/.test(rawName) ||
+      !/^\d{1,3}$/.test(number) || Number(number) < 1 || className.length < 2 || className.length > 50 || /[\r\n\t]/.test(className)) {
+    throw new Error("INVALID_REGISTRATION");
+  }
+  return { studentId, fullName, number, className };
+}
+
+export async function readStudentRegistration(userId) {
+  const all = await rows();
+  return registrationFromRow(all.find((row) => row[0] === userId));
+}
+
+export async function registerStudent(user, input) {
+  const registration = normalizeRegistration(input);
+  const all = await rows();
+  const index = all.findIndex((row) => row[0] === user.userId);
+  const existing = registrationFromRow(all[index]);
+  if (existing) return existing;
+  if (all.some((row, rowIndex) => rowIndex !== index && String(row[11] ?? "") === registration.studentId)) {
+    throw new Error("STUDENT_ID_TAKEN");
+  }
+  if (index >= 0) {
+    const rowNumber = index + 2;
+    const data = [
+      { range: `'${tab}'!A${rowNumber}:B${rowNumber}`, majorDimension: "ROWS", values: [[user.userId, user.displayName]] },
+      { range: `'${tab}'!L${rowNumber}:O${rowNumber}`, majorDimension: "ROWS", values: [[registration.studentId, registration.fullName, registration.number, registration.className]] },
+    ];
+    if (!all[index][2]) data.push({ range: `'${tab}'!C${rowNumber}`, majorDimension: "ROWS", values: [[registration.className]] });
+    await sheets("/values:batchUpdate", { method: "POST", body: JSON.stringify({ valueInputOption: "RAW", data }) });
+  } else {
+    await sheets(`${range("A:O")}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+      method: "POST", body: JSON.stringify({ range: `'${tab}'!A:O`, majorDimension: "ROWS", values: [[
+        user.userId, user.displayName, registration.className,
+        "", "", "", "", "", "", "", "",
+        registration.studentId, registration.fullName, registration.number, registration.className,
+      ]] }),
+    });
+  }
+  return registration;
 }
 
 export async function writeProgress(user, input) {
@@ -128,6 +187,9 @@ export async function listStudents() {
       userId: row[0],
       displayName: String(row[1] ?? ""),
       className: String(row[2] ?? "").trim(),
+      studentId: String(row[11] ?? ""),
+      fullName: String(row[12] ?? ""),
+      number: String(row[13] ?? ""),
       updatedAt: String(row[9] ?? ""),
       progress,
     }];

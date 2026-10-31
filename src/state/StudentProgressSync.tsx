@@ -149,7 +149,7 @@ export function StudentProgressSync({ children }: { children: ReactNode }) {
         <h1>{phase === "consent" ? "บันทึกการเรียนกับบัญชี LINE" : phase === "error" ? "เชื่อมข้อมูลการเรียนไม่ได้" : "กำลังโหลดข้อมูลการเรียน"}</h1>
         {phase === "loading" && <p><LoaderCircle className="student-sync-spin" size={19} /> กรุณารอสักครู่...</p>}
         {phase === "consent" && <>
-          <p>หากยอมรับ ระบบจะบันทึกชื่อ LINE บทเรียนที่เรียนจบ ผลแบบทดสอบ และสถานะ Code Lab กับ Workshop ลง Google Sheet ที่ครูดูได้ โค้ดที่กำลังเขียนจะอยู่ในอุปกรณ์นี้</p>
+          <p>ข้อมูลนักเรียนที่ลงทะเบียนบันทึกแล้ว หากยอมรับ ระบบจะบันทึกบทเรียนที่เรียนจบ ผลแบบทดสอบ และสถานะ Code Lab กับ Workshop ลง Google Sheet ที่ครูดูได้ โค้ดที่กำลังเขียนจะอยู่ในอุปกรณ์นี้</p>
           {hasLocal && <button type="button" className="button button--primary" onClick={() => void begin(true)}>ยอมรับและนำข้อมูลเดิมในเครื่องนี้เข้า</button>}
           <button type="button" className="button button--primary" onClick={() => void begin(false)}>ยอมรับและเริ่มใหม่</button>
           <button type="button" className="button button--secondary" onClick={() => { setStatus("offline"); setPhase("ready"); }}>เรียนโดยบันทึกในเครื่องนี้เท่านั้น</button>

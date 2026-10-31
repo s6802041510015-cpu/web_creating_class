@@ -2,9 +2,11 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type liff from "@line/liff";
 import { LoaderCircle, LogIn, RefreshCw } from "lucide-react";
+import { StudentRegistrationForm } from "../components/auth/StudentRegistrationForm";
+import type { StudentRegistration } from "../components/auth/StudentRegistrationForm";
 import "../styles/line-auth.css";
 
-type LineUser = { userId: string; displayName: string; pictureUrl?: string };
+type LineUser = { userId: string; displayName: string; fullName?: string; pictureUrl?: string };
 type LineAuthState = {
   user: LineUser | null;
   isDemo: boolean;
@@ -44,12 +46,27 @@ async function verifyUser(idToken: string, signal: AbortSignal): Promise<LineUse
   return result.user;
 }
 
+async function studentRegistration(method: "GET" | "POST", input?: StudentRegistration, signal?: AbortSignal) {
+  const token = await getIdToken();
+  if (!token) throw new Error("LINE Login หมดอายุ กรุณาเปิดเว็บใหม่");
+  const response = await fetch(`${apiOrigin}/api/student`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, ...(input ? { "Content-Type": "application/json" } : {}) },
+    ...(input ? { body: JSON.stringify(input) } : {}),
+    signal: signal ?? AbortSignal.timeout(20000),
+  });
+  const result = await response.json().catch(() => null) as { registration?: StudentRegistration | null; error?: string } | null;
+  if (!response.ok) throw new Error(result?.error || "เชื่อมต่อข้อมูลนักเรียนไม่ได้");
+  return result?.registration ?? null;
+}
+
 export function useLineAuth() {
   return useContext(LineAuthContext);
 }
 
 export function LineAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<LineUser | null>(null);
+  const [pendingUser, setPendingUser] = useState<LineUser | null>(null);
   const [status, setStatus] = useState<"loading" | "login" | "error">("loading");
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -59,6 +76,7 @@ export function LineAuthProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
     setStatus("loading");
     setError("");
+    setPendingUser(null);
     void (async () => {
       try {
         if (!apiOrigin) throw new Error("ยังไม่ได้ตั้งค่า VITE_AI_API_URL สำหรับ API ยืนยันตัวตน");
@@ -73,11 +91,15 @@ export function LineAuthProvider({ children }: { children: ReactNode }) {
         if (!idToken) throw new Error("LIFF ไม่ได้รับ ID token กรุณาเปิด scope openid ใน LINE Developers");
         const verified = await verifyUser(idToken, controller.signal);
         if (controller.signal.aborted) return;
-        setUser(verified);
+        const registration = await studentRegistration("GET", undefined, controller.signal);
+        if (controller.signal.aborted) return;
+        if (registration) setUser({ ...verified, fullName: registration.fullName });
+        else setPendingUser(verified);
         // The photo is display-only. A missing photo or denied profile scope must not block login.
         void sdk.getProfile().then((profile) => {
           if (!controller.signal.aborted && profile.userId === verified.userId && profile.pictureUrl) {
-            setUser({ ...verified, pictureUrl: profile.pictureUrl });
+            setUser((current) => current?.userId === verified.userId ? { ...current, pictureUrl: profile.pictureUrl } : current);
+            setPendingUser((current) => current?.userId === verified.userId ? { ...current, pictureUrl: profile.pictureUrl } : current);
           }
         }).catch(() => {});
       } catch (cause) {
@@ -94,6 +116,14 @@ export function LineAuthProvider({ children }: { children: ReactNode }) {
   }
   if (user) {
     return <LineAuthContext.Provider value={{ user, isDemo: false, getIdToken }}>{children}</LineAuthContext.Provider>;
+  }
+  if (pendingUser) {
+    return <StudentRegistrationForm onSubmit={async (input) => {
+      const registration = await studentRegistration("POST", input);
+      if (!registration) throw new Error("บันทึกข้อมูลนักเรียนไม่สำเร็จ");
+      setUser({ ...pendingUser, fullName: registration.fullName });
+      setPendingUser(null);
+    }} />;
   }
 
   return (

@@ -31,6 +31,6 @@ npm run build
 
 ข้อมูลบทเรียนอยู่ใน `src/data/lessons.ts` ข้อสอบอยู่ใน `src/data/preTest.ts` และ `src/data/postTest.ts` รายละเอียดงานอยู่ใน `src/data/finalProject.ts`
 
-เว็บนักเรียนเข้าสู่ระบบผ่าน LINE LIFF และซิงก์บทเรียน คะแนน และสถานะกิจกรรมลง Google Sheets ผ่าน Vercel API หลังได้รับความยินยอม โค้ดร่างของ Code Lab และ Workshop เก็บเฉพาะในอุปกรณ์
+เว็บนักเรียนเข้าสู่ระบบผ่าน LINE LIFF ครั้งแรกต้องลงทะเบียนรหัสนักเรียน ชื่อ-นามสกุล เลขที่ และชั้น/ห้อง ข้อมูลนี้บันทึกใน Google Sheet แล้วจึงเลือกซิงก์บทเรียน คะแนน และสถานะกิจกรรมผ่าน Vercel API โค้ดร่างของ Code Lab และ Workshop เก็บเฉพาะในอุปกรณ์
 
 AI ผู้ช่วยใช้ Gemini โดยเก็บคีย์บน Vercel และยืนยันบัญชี LINE ก่อนเรียกใช้ แชทซ่อนบนแบบทดสอบ ส่วนเว็บครูอยู่ที่ `/teacher` เข้าด้วย Google บัญชีที่อนุญาตเพื่อดูความก้าวหน้าและจัดห้องเรียน ขั้นตอนตั้งค่าคีย์ Google OAuth และ Google Sheets อยู่ใน [vercel-api/README.md](vercel-api/README.md)
