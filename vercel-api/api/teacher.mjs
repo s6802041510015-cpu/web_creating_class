@@ -1,4 +1,4 @@
-import { verifyTeacherToken } from "../lib/teacher-auth.mjs";
+import { teacherAuthConfigured, verifyTeacherSession } from "../lib/teacher-auth.mjs";
 import { listStudents, updateStudentClass } from "../lib/google-sheets.mjs";
 
 const defaultOrigins = ["https://s6802041510015-cpu.github.io"];
@@ -38,34 +38,25 @@ export default {
       return new Response(null, { status: 204, headers: cors ?? {} });
     if (request.method !== "GET" && request.method !== "PUT")
       return json({ error: "ใช้ GET หรือ PUT เท่านั้น" }, 405, cors ?? {});
-    if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.TEACHER_EMAILS)
+    if (!teacherAuthConfigured())
       return json({ error: "ยังไม่ได้ตั้งค่าบัญชีครู" }, 503, cors ?? {});
     const token = /^Bearer (\S+)$/i.exec(
       request.headers.get("Authorization") ?? "",
     )?.[1];
     if (!token)
-      return json({ error: "กรุณาเข้าสู่ระบบด้วย Google" }, 401, cors ?? {});
-    let teacher;
-    try {
-      teacher = await verifyTeacherToken(token);
-    } catch {
-      return json(
-        { error: "ตรวจสอบบัญชี Google ไม่สำเร็จ กรุณาเข้าสู่ระบบอีกครั้ง" },
-        401,
-        cors ?? {},
-      );
-    }
+      return json({ error: "กรุณาเข้าสู่ระบบสำหรับครู" }, 401, cors ?? {});
+    const teacher = verifyTeacherSession(token);
     if (!teacher)
       return json(
-        { error: "บัญชี Google นี้ไม่ได้รับสิทธิ์ดูข้อมูลนักเรียน" },
-        403,
+        { error: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง" },
+        401,
         cors ?? {},
       );
     try {
       if (request.method === "GET")
         return json(
           {
-            teacher: { name: teacher.name, email: teacher.email },
+            teacher,
             students: await listStudents(),
           },
           200,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -11,31 +12,13 @@ import {
 import { ThemeToggle } from "../components/ui/ThemeToggle";
 import "./teacher.css";
 
-type GoogleIdentity = {
-  accounts: {
-    id: {
-      initialize: (options: {
-        client_id: string;
-        callback: (response: { credential: string }) => void;
-      }) => void;
-      renderButton: (
-        element: HTMLElement,
-        options: Record<string, string>,
-      ) => void;
-      disableAutoSelect: () => void;
-    };
-  };
-};
-declare global {
-  interface Window {
-    google?: GoogleIdentity;
-  }
-}
-
 type Assessment = { score: number; total: number } | null;
 type Student = {
   userId: string;
   displayName: string;
+  studentId: string;
+  fullName: string;
+  number: string;
   className: string;
   updatedAt: string;
   progress: {
@@ -45,37 +28,15 @@ type Student = {
     workshopChecked: string[];
   };
 };
-type Teacher = { name: string; email: string };
+type Teacher = { name: string };
 
 const apiOrigin = (import.meta.env.VITE_AI_API_URL ?? "")
   .trim()
   .replace(/\/+$/, "");
-const clientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "").trim();
-let googleScript: Promise<GoogleIdentity> | null = null;
-
-function loadGoogle(): Promise<GoogleIdentity> {
-  if (window.google) return Promise.resolve(window.google);
-  if (!googleScript)
-    googleScript = new Promise<GoogleIdentity>((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      script.onload = () =>
-        window.google
-          ? resolve(window.google)
-          : reject(new Error("โหลด Google Sign-In ไม่สำเร็จ"));
-      script.onerror = () => reject(new Error("โหลด Google Sign-In ไม่สำเร็จ"));
-      document.head.append(script);
-    }).catch((error) => {
-      googleScript = null;
-      throw error;
-    });
-  return googleScript!;
-}
-
 export function TeacherPage() {
-  const buttonRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -86,40 +47,35 @@ export function TeacherPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (token || !clientId || !buttonRef.current) return;
-    let active = true;
-    void loadGoogle()
-      .then((google) => {
-        if (!active || !buttonRef.current) return;
-        google.accounts.id.initialize({
-          client_id: clientId,
-          callback: ({ credential }) => {
-            sessionRef.current = credential;
-            setError("");
-            setToken(credential);
-          },
-        });
-        buttonRef.current.replaceChildren();
-        google.accounts.id.renderButton(buttonRef.current, {
-          theme: "outline",
-          size: "large",
-          shape: "pill",
-          text: "signin_with",
-        });
-      })
-      .catch((cause) => {
-        if (active)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "โหลด Google Sign-In ไม่สำเร็จ",
-          );
+  async function signIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!apiOrigin || loading) return;
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`${apiOrigin}/api/teacher/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+        signal: AbortSignal.timeout(20000),
       });
-    return () => {
-      active = false;
-    };
-  }, [token]);
+      const result = (await response.json().catch(() => null)) as {
+        token?: string;
+        teacher?: Teacher;
+        error?: string;
+      } | null;
+      if (!response.ok || !result?.token)
+        throw new Error(result?.error || "เข้าสู่ระบบไม่ได้");
+      sessionRef.current = result.token;
+      setPassword("");
+      setTeacher(result.teacher ?? null);
+      setToken(result.token);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "เข้าสู่ระบบไม่ได้");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const loadStudents = useCallback(async (idToken: string) => {
     if (!apiOrigin) throw new Error("ยังไม่ได้ตั้งค่า URL ของ API");
@@ -132,6 +88,12 @@ export function TeacherPage() {
       students?: Student[];
       error?: string;
     } | null;
+    if (response.status === 401) {
+      sessionRef.current = "";
+      setToken("");
+      setTeacher(null);
+      setStudents([]);
+    }
     if (!response.ok)
       throw new Error(result?.error || "โหลดข้อมูลนักเรียนไม่ได้");
     if (sessionRef.current !== idToken) return;
@@ -176,7 +138,7 @@ export function TeacherPage() {
             ? !student.className
             : student.className === classFilter);
         const text =
-          `${student.displayName} ${student.className}`.toLocaleLowerCase("th");
+          `${student.fullName} ${student.studentId} ${student.number} ${student.displayName} ${student.className}`.toLocaleLowerCase("th");
         return (
           matchesClass && text.includes(query.trim().toLocaleLowerCase("th"))
         );
@@ -232,8 +194,8 @@ export function TeacherPage() {
 
   function signOut() {
     sessionRef.current = "";
-    window.google?.accounts.id.disableAutoSelect();
     setToken("");
+    setPassword("");
     setTeacher(null);
     setStudents([]);
     setError("");
@@ -274,17 +236,44 @@ export function TeacherPage() {
             Google Sheet
           </p>
         </div>
-        {!clientId || !apiOrigin ? (
+        {!apiOrigin ? (
           <section className="teacher-card teacher-login">
             <h2>เว็บครูยังไม่พร้อมใช้งาน</h2>
-            <p>ต้องตั้งค่า Google OAuth Client ID และ URL ของ API ก่อน</p>
+            <p>ยังไม่ได้ตั้งค่า URL ของ API</p>
           </section>
         ) : !token ? (
           <section className="teacher-card teacher-login">
             <GraduationCap size={32} />
             <h2>เข้าสู่ระบบสำหรับครู</h2>
-            <p>ใช้บัญชี Google ที่ได้รับสิทธิ์เพื่อดูข้อมูลนักเรียน</p>
-            <div ref={buttonRef} className="teacher-google-button" />
+            <p>กรอกชื่อผู้ใช้และรหัสผ่านสำหรับดูข้อมูลนักเรียน</p>
+            <form onSubmit={(event) => void signIn(event)}>
+              <label>
+                ชื่อผู้ใช้
+                <input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  autoComplete="username"
+                  maxLength={100}
+                  required
+                  disabled={loading}
+                />
+              </label>
+              <label>
+                รหัสผ่าน
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  maxLength={256}
+                  required
+                  disabled={loading}
+                />
+              </label>
+              <button type="submit" disabled={loading}>
+                {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+              </button>
+            </form>
             {error && (
               <p className="teacher-error" role="alert">
                 {error}
@@ -299,7 +288,6 @@ export function TeacherPage() {
                   เข้าสู่ระบบ:{" "}
                   <strong>{teacher?.name || "กำลังตรวจสอบ..."}</strong>
                 </span>
-                {teacher && <small>{teacher.email}</small>}
               </div>
               <button
                 type="button"
@@ -365,7 +353,7 @@ export function TeacherPage() {
                         <input
                           value={query}
                           onChange={(event) => setQuery(event.target.value)}
-                          placeholder="ค้นหาชื่อหรือห้อง"
+                          placeholder="ค้นหาชื่อ รหัส เลขที่ หรือห้อง"
                           aria-label="ค้นหานักเรียน"
                         />
                       </label>
@@ -412,9 +400,13 @@ export function TeacherPage() {
                             <tr key={student.userId}>
                               <td>
                                 <strong>
-                                  {student.displayName || "ไม่ระบุชื่อ"}
+                                  {student.fullName || student.displayName || "ไม่ระบุชื่อ"}
                                 </strong>
-                                <small>{student.userId.slice(0, 9)}…</small>
+                                <small>
+                                  {student.studentId
+                                    ? `${student.studentId} · เลขที่ ${student.number}`
+                                    : `LINE: ${student.displayName || "—"}`}
+                                </small>
                               </td>
                               <td>
                                 <div className="teacher-class-edit">
@@ -431,7 +423,7 @@ export function TeacherPage() {
                                     }
                                     placeholder="ระบุห้อง"
                                     maxLength={50}
-                                    aria-label={`ห้องเรียนของ ${student.displayName}`}
+                                    aria-label={`ห้องเรียนของ ${student.fullName || student.displayName}`}
                                   />
                                   <button
                                     type="button"

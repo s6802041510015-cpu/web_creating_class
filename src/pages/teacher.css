@@ -100,11 +100,47 @@
 .teacher-login p {
   color: var(--text-secondary);
 }
-.teacher-google-button {
-  display: flex;
-  justify-content: center;
-  min-height: 44px;
-  margin-top: 20px;
+.teacher-login form {
+  display: grid;
+  gap: 15px;
+  margin-top: 22px;
+  text-align: left;
+}
+.teacher-login label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+.teacher-login input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 13px;
+  border: 1px solid var(--border-soft);
+  border-radius: 11px;
+  outline: none;
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  font: inherit;
+}
+.teacher-login input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(30, 199, 238, 0.16);
+}
+.teacher-login form button {
+  min-height: 46px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(110deg, var(--purple), var(--blue));
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+.teacher-login form button:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 .teacher-toolbar {
   display: flex;

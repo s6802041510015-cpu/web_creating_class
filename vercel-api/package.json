@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "teacher:credentials": "node scripts/create-teacher-credentials.mjs"
   },
   "dependencies": {
     "google-auth-library": "^11.3.2"

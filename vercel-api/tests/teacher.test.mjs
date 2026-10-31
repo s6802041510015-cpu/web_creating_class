@@ -1,125 +1,81 @@
 import test, { mock } from "node:test";
 import assert from "node:assert/strict";
-import { JWT, OAuth2Client } from "google-auth-library";
+import { JWT } from "google-auth-library";
 import teacherApi from "../api/teacher.mjs";
+import loginApi from "../api/teacher/login.mjs";
+import { createTeacherPasswordHash, verifyTeacherSession } from "../lib/teacher-auth.mjs";
 
 const origin = "https://s6802041510015-cpu.github.io";
 const userId = `U${"a".repeat(32)}`;
 const heading = ["LINE User ID", ...Array(10).fill(""), "รหัสนักเรียน", "ชื่อ-นามสกุล", "เลขที่", "ชั้นที่นักเรียนระบุ"];
-const progress = {
-  version: 1,
-  completedLessons: ["00"],
-  assessments: { pre: null, post: null },
-  codeLabCompleted: [],
-  workshopChecked: [],
-};
-const request = (method = "GET", body, token = "google-token") =>
-  new Request("https://example.vercel.app/api/teacher", {
-    method,
-    headers: {
-      Origin: origin,
-      Authorization: `Bearer ${token}`,
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+const progress = { version: 1, completedLessons: ["00"], assessments: { pre: null, post: null }, codeLabCompleted: [], workshopChecked: [] };
 
-test("teacher API requires configured Google login", async () => {
-  const response = await teacherApi.fetch(request());
-  assert.equal(response.status, 503);
+const request = (method = "GET", body, token = "") => new Request("https://example.vercel.app/api/teacher", {
+  method,
+  headers: { Origin: origin, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { "Content-Type": "application/json" } : {}) },
+  ...(body ? { body: JSON.stringify(body) } : {}),
+});
+const loginRequest = (username, password, requestOrigin = origin) => new Request("https://example.vercel.app/api/teacher/login", {
+  method: "POST", headers: { Origin: requestOrigin, "Content-Type": "application/json", "x-forwarded-for": "192.0.2.10" },
+  body: JSON.stringify({ username, password }),
 });
 
-test("teacher API verifies allowlisted account, returns students, and updates only class column", async () => {
-  const savedEnv = Object.fromEntries(
-    [
-      "GOOGLE_OAUTH_CLIENT_ID",
-      "TEACHER_EMAILS",
-      "GOOGLE_SHEET_ID",
-      "GOOGLE_SERVICE_ACCOUNT_JSON",
-    ].map((key) => [key, process.env[key]]),
-  );
+test("teacher endpoints stay closed until password credentials are configured", async () => {
+  assert.equal((await teacherApi.fetch(request())).status, 503);
+  assert.equal((await loginApi.fetch(loginRequest("teacher", "any"))).status, 503);
+});
+
+test("teacher password login issues a signed short-lived session for student data", async () => {
+  const keys = ["TEACHER_USERNAME", "TEACHER_PASSWORD_HASH", "TEACHER_SESSION_SECRET", "GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"];
+  const savedEnv = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   const originalFetch = globalThis.fetch;
-  process.env.GOOGLE_OAUTH_CLIENT_ID =
-    "teacher-client.apps.googleusercontent.com";
-  process.env.TEACHER_EMAILS = "teacher@example.com";
+  const password = "correct-horse-battery-staple";
+  process.env.TEACHER_USERNAME = "Katawut";
+  process.env.TEACHER_PASSWORD_HASH = await createTeacherPasswordHash(password);
+  process.env.TEACHER_SESSION_SECRET = "s".repeat(43);
   process.env.GOOGLE_SHEET_ID = "testspreadsheetid0123456789";
-  process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({
-    client_email: "robot@example.iam.gserviceaccount.com",
-    private_key: "test",
-  });
-  let email = "other@example.com";
-  mock.method(OAuth2Client.prototype, "verifyIdToken", async ({ audience }) => {
-    assert.equal(audience, process.env.GOOGLE_OAUTH_CLIENT_ID);
-    return {
-      getPayload: () => ({
-        sub: "google-user",
-        email,
-        email_verified: true,
-        name: "Teacher",
-      }),
-    };
-  });
-  mock.method(JWT.prototype, "getAccessToken", async () => ({
-    token: "sheets-token",
-  }));
-  const rows = [
-    [
-      userId,
-      "Student",
-      "",
-      "",
-      "",
-      1,
-      "00",
-      0,
-      0,
-      "2026-10-29T00:00:00.000Z",
-      JSON.stringify(progress),
-    ],
-  ];
+  process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({ client_email: "robot@example.iam.gserviceaccount.com", private_key: "test" });
+  mock.method(JWT.prototype, "getAccessToken", async () => ({ token: "sheets-token" }));
+  const rows = [[userId, "LINE nickname", "ปวช.1/1", "", "", 1, "00", 0, 0, "2026-10-29T00:00:00.000Z", JSON.stringify(progress), "6802041510015", "สมชาย ใจดี", "12", "ปวช.1/1"]];
   let classWrite;
   globalThis.fetch = async (url, options = {}) => {
     const path = String(url);
-    if (path.includes("fields=sheets.properties.title"))
-      return Response.json({ sheets: [{ properties: { title: "Students" } }] });
-    if (path.includes("A1%3AO1"))
-      return Response.json({ values: [heading] });
+    if (path.includes("fields=sheets.properties.title")) return Response.json({ sheets: [{ properties: { title: "Students" } }] });
+    if (path.includes("A1%3AO1")) return Response.json({ values: [heading] });
     if (path.includes("A2%3AO")) return Response.json({ values: rows });
-    if (options.method === "PUT") {
-      classWrite = { path, body: JSON.parse(options.body) };
-      return Response.json({ updatedRows: 1 });
-    }
+    if (options.method === "PUT") { classWrite = JSON.parse(options.body); return Response.json({ updatedRows: 1 }); }
     throw new Error(`Unexpected request: ${path}`);
   };
   try {
-    assert.equal((await teacherApi.fetch(request())).status, 403);
-    email = "teacher@example.com";
-    const listResponse = await teacherApi.fetch(request());
+    assert.equal((await loginApi.fetch(loginRequest("Katawut", password, "https://other.example"))).status, 403);
+    assert.equal((await loginApi.fetch(loginRequest("wrong", password))).status, 401);
+    assert.equal((await loginApi.fetch(loginRequest("Katawut", "wrong-password"))).status, 401);
+    const signedIn = await loginApi.fetch(loginRequest("katawut", password));
+    assert.equal(signedIn.status, 200);
+    const login = await signedIn.json();
+    assert.equal(login.teacher.name, "Katawut");
+    assert.equal(typeof login.token, "string");
+    assert.equal(verifyTeacherSession(login.token)?.name, "Katawut");
+    assert.equal(verifyTeacherSession(`${login.token}x`), null);
+    assert.equal((await teacherApi.fetch(request())).status, 401);
+    assert.equal((await teacherApi.fetch(request("GET", undefined, "invalid"))).status, 401);
+    const listResponse = await teacherApi.fetch(request("GET", undefined, login.token));
     assert.equal(listResponse.status, 200);
     const list = await listResponse.json();
-    assert.equal(list.teacher.email, email);
+    assert.equal(list.teacher.name, "Katawut");
+    assert.equal(list.students[0].fullName, "สมชาย ใจดี");
+    assert.equal(list.students[0].studentId, "6802041510015");
     assert.deepEqual(list.students[0].progress, progress);
-    const updateResponse = await teacherApi.fetch(
-      request("PUT", { userId, className: "ปวช.1/1" }),
-    );
-    assert.equal(updateResponse.status, 200);
-    assert.match(classWrite.path, /C2/);
-    assert.deepEqual(classWrite.body.values, [["ปวช.1/1"]]);
-    assert.equal(classWrite.body.range, "'Students'!C2");
-    assert.equal(
-      (
-        await teacherApi.fetch(
-          request("PUT", { userId, className: "x".repeat(51) }),
-        )
-      ).status,
-      400,
-    );
+    assert.equal((await teacherApi.fetch(request("PUT", { userId, className: "ปวช.2/1" }, login.token))).status, 200);
+    assert.equal(classWrite.range, "'Students'!C2");
+    assert.deepEqual(classWrite.values, [["ปวช.2/1"]]);
+    assert.equal((await teacherApi.fetch(request("PUT", { userId, className: "x".repeat(51) }, login.token))).status, 400);
+    const now = Date.now();
+    mock.method(Date, "now", () => now + 8 * 60 * 60 * 1000 + 1000);
+    assert.equal(verifyTeacherSession(login.token), null);
   } finally {
     globalThis.fetch = originalFetch;
     mock.restoreAll();
-    for (const [key, value] of Object.entries(savedEnv)) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
+    for (const [key, value] of Object.entries(savedEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
   }
 });

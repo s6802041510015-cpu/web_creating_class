@@ -1,6 +1,6 @@
 # WebQuest API และข้อมูลความก้าวหน้า
 
-เว็บนักเรียนอยู่บน GitHub Pages ส่วน Vercel project นี้ (`vercel-api`) ให้บริการ `/api/chat`, `/api/auth/line`, `/api/student`, `/api/progress` และ `/api/teacher` โดยตรวจ LINE ID token สำหรับนักเรียน และ Google ID token พร้อมรายชื่ออีเมลที่อนุญาตสำหรับครู ก่อนอ่านหรือเขียนข้อมูล
+เว็บนักเรียนอยู่บน GitHub Pages ส่วน Vercel project นี้ (`vercel-api`) ให้บริการ `/api/chat`, `/api/auth/line`, `/api/student`, `/api/progress`, `/api/teacher/login` และ `/api/teacher` โดยตรวจ LINE ID token สำหรับนักเรียน และชื่อผู้ใช้ รหัสผ่าน พร้อมเซสชันสำหรับครู ก่อนอ่านหรือเขียนข้อมูล
 
 ## ตั้งค่า Google Sheets (ทำครั้งเดียว)
 
@@ -38,18 +38,18 @@ LINE Developers ต้องตั้ง LIFF Endpoint URL เป็น `https:/
 
 แชทใช้ LINE ID token ของผู้เรียนเพื่อยืนยันตัวตนก่อนเรียก Gemini คีย์ Gemini อยู่เฉพาะใน Vercel ไม่ส่งชื่อหรือ LINE user ID ไปยัง Gemini แชทซ่อนบนแบบทดสอบและให้คำใบ้สำหรับ Workshop; โค้ดจะส่งเมื่อผู้เรียนเลือกแนบเท่านั้น
 
-## เปิดใช้เว็บครูด้วย Google
+## เปิดใช้เว็บครูด้วยชื่อผู้ใช้และรหัสผ่าน
 
-เว็บครูอยู่ที่ `https://s6802041510015-cpu.github.io/web_creating_class/teacher` ใช้บัญชี Google ที่ได้รับสิทธิ์และแยกจากการเข้าเว็บนักเรียนผ่าน LINE เว็บครูดูรายชื่อ คะแนน ความก้าวหน้า กรองห้อง ค้นหานักเรียน และแก้ไขห้องได้ API ตรวจ Google ID token และรายชื่ออีเมลที่อนุญาตทุกคำขอ
+เว็บครูอยู่ที่ `https://s6802041510015-cpu.github.io/web_creating_class/teacher` และใช้บัญชีครูหนึ่งบัญชีแยกจาก LINE ของนักเรียน เว็บครูดูชื่อจริง รหัสนักเรียน เลขที่ คะแนน ความก้าวหน้า กรองห้อง ค้นหา และแก้ไขห้องได้ API ตรวจเซสชันที่ลงลายเซ็นก่อนอ่านหรือเขียนข้อมูลทุกคำขอ
 
-1. ใน Google Cloud project `htmlweb-class` เปิด **Google Auth Platform** ตั้งค่า Branding และ Audience สำหรับ Sign in with Google หากใช้โหมด Testing ให้เพิ่มอีเมลครูเป็น Test user
-2. เปิด **Clients → Create client → Web application** เพิ่ม Authorized JavaScript origins เป็น `https://s6802041510015-cpu.github.io` (ไม่มี path) สำหรับทดสอบในเครื่องเพิ่ม `http://localhost` และ `http://localhost:5174` ไม่ต้องใช้ Client Secret กับขั้นตอนนี้
-3. คัดลอก Client ID ที่ลงท้าย `.apps.googleusercontent.com` แล้วตั้ง Vercel Production Config:
-   - `GOOGLE_OAUTH_CLIENT_ID` = Client ID นี้
-   - `TEACHER_EMAILS` = `s6802041510015@email.kmutnb.ac.th` (ถ้ามีหลายคนใช้ comma คั่น)
-4. Redeploy Vercel จากนั้นตั้ง GitHub Actions Repository Variable `VITE_GOOGLE_CLIENT_ID` เป็น Client ID เดียวกัน แล้วรัน Deploy to GitHub Pages ใหม่
-5. เปิด URL เว็บครูด้วย Chrome หรือเบราว์เซอร์ปกติ เข้าด้วยบัญชี Google ที่อนุญาต แล้วตรวจรายชื่อจาก Sheet การเข้าสู่ระบบเก็บ ID token ในหน่วยความจำของหน้าเว็บเท่านั้น เมื่อรีโหลดอาจต้องเข้าสู่ระบบใหม่
+1. เปิด PowerShell ในโฟลเดอร์ `vercel-api` แล้วรัน `npm run teacher:credentials` พิมพ์รหัสผ่านที่เดายากอย่างน้อย 16 ตัวอักษรสองครั้ง ตัวอักษรจะไม่แสดงบนหน้าจอ คำสั่งจะแสดง `TEACHER_PASSWORD_HASH` และ `TEACHER_SESSION_SECRET` สำหรับคัดลอก ไม่เก็บรหัสผ่านลงไฟล์
+2. ใน Vercel project ของ API ไปที่ **Settings → Environment Variables** เพิ่มสำหรับ **Production**:
+   - `TEACHER_USERNAME` = ชื่อผู้ใช้ที่ต้องการ เช่น `katawut` (Config)
+   - `TEACHER_PASSWORD_HASH` = ค่าที่ได้จากคำสั่งข้อ 1 (Secret)
+   - `TEACHER_SESSION_SECRET` = ค่าที่ได้จากคำสั่งข้อ 1 (Secret)
+3. กด **Redeploy** เพื่อให้ค่าใหม่มีผล ไม่ต้องตั้ง Google OAuth Client ID หรือ GitHub Actions variable สำหรับเว็บครู
+4. เปิด URL เว็บครูแล้วเข้าสู่ระบบด้วยชื่อผู้ใช้จากข้อ 2 และรหัสผ่านที่เลือกในข้อ 1 ไม่ต้องใส่ค่าแฮชเป็นรหัสผ่าน
 
-หน้าเว็บครูไม่เปิดข้อมูลเมื่อยังไม่ได้ตั้งค่าหรือบัญชีไม่มีสิทธิ์ การจัดห้องแก้เฉพาะคอลัมน์ C ของแท็บ Students และการซิงก์ของนักเรียนไม่เขียนคอลัมน์นี้ ครูไม่ควรเปิด Sheet เป็น Anyone with the link เพราะมีข้อมูลนักเรียน
+รหัสผ่านและกุญแจเซสชันอยู่เฉพาะ Vercel ส่วนเว็บถือโทเค็นไว้ในหน่วยความจำและต้องเข้าสู่ระบบใหม่เมื่อรีโหลดหรือครบ 8 ชั่วโมง การเปลี่ยน `TEACHER_SESSION_SECRET` ทำให้เซสชันเดิมใช้ไม่ได้ ระบบจำกัดความถี่การลองรหัสผ่านในแต่ละอินสแตนซ์ของ API; หากเปิดให้ครูหลายบัญชีหรือใช้งานวงกว้าง ควรเปลี่ยนไปใช้บริการยืนยันตัวตนและจำกัดความถี่แบบส่วนกลาง
 
-คู่มือ Google: [ตั้งค่า Sign in with Google](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid) และ [ตรวจ ID token บนเซิร์ฟเวอร์](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)
+หน้าเว็บครูไม่เปิดข้อมูลเมื่อยังไม่ได้ตั้งค่าหรือยังไม่เข้าสู่ระบบ การจัดห้องแก้เฉพาะคอลัมน์ C ของแท็บ Students และการซิงก์ของนักเรียนไม่เขียนคอลัมน์นี้ คงการแชร์ Sheet เป็น **Restricted/จำกัด** เพราะมีข้อมูลนักเรียน
