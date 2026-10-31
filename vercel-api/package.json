@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "teacher:credentials": "node scripts/create-teacher-credentials.mjs"
+    "teacher:credentials": "node scripts/create-teacher-credentials.mjs",
+    "teacher:extra-accounts": "node scripts/create-extra-teacher-accounts.mjs"
   },
   "dependencies": {
     "google-auth-library": "^11.3.2"

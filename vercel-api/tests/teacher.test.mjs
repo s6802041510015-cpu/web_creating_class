@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { JWT } from "google-auth-library";
 import teacherApi from "../api/teacher.mjs";
 import loginApi from "../api/teacher/login.mjs";
-import { createTeacherPasswordHash, verifyTeacherSession } from "../lib/teacher-auth.mjs";
+import { createTeacherPasswordHash, teacherAuthConfigured, verifyTeacherSession } from "../lib/teacher-auth.mjs";
 
 const origin = "https://s6802041510015-cpu.github.io";
 const userId = `U${"a".repeat(32)}`;
@@ -31,12 +31,13 @@ test("teacher password setup accepts six characters and rejects shorter password
 });
 
 test("teacher password login issues a signed short-lived session for student data", async () => {
-  const keys = ["TEACHER_USERNAME", "TEACHER_PASSWORD_HASH", "TEACHER_SESSION_SECRET", "GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"];
+  const keys = ["TEACHER_USERNAME", "TEACHER_PASSWORD_HASH", "TEACHER_EXTRA_ACCOUNTS_JSON", "TEACHER_SESSION_SECRET", "GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"];
   const savedEnv = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   const originalFetch = globalThis.fetch;
   const password = "correct-horse-battery-staple";
   process.env.TEACHER_USERNAME = "Katawut";
   process.env.TEACHER_PASSWORD_HASH = await createTeacherPasswordHash(password);
+  delete process.env.TEACHER_EXTRA_ACCOUNTS_JSON;
   process.env.TEACHER_SESSION_SECRET = "s".repeat(43);
   process.env.GOOGLE_SHEET_ID = "testspreadsheetid0123456789";
   process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({ client_email: "robot@example.iam.gserviceaccount.com", private_key: "test" });
@@ -110,6 +111,57 @@ test("teacher password login issues a signed short-lived session for student dat
     const now = Date.now();
     mock.method(Date, "now", () => now + 8 * 60 * 60 * 1000 + 1000);
     assert.equal(verifyTeacherSession(login.token), null);
+  } finally {
+    globalThis.fetch = originalFetch;
+    mock.restoreAll();
+    for (const [key, value] of Object.entries(savedEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
+});
+
+test("three teacher accounts see the same students with independent sessions", async () => {
+  const keys = ["TEACHER_USERNAME", "TEACHER_PASSWORD_HASH", "TEACHER_EXTRA_ACCOUNTS_JSON", "TEACHER_SESSION_SECRET", "GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"];
+  const savedEnv = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  const originalFetch = globalThis.fetch;
+  const passwords = ["primary-password", "second-password", "third-password"];
+  process.env.TEACHER_USERNAME = "katawut";
+  process.env.TEACHER_PASSWORD_HASH = await createTeacherPasswordHash(passwords[0]);
+  process.env.TEACHER_EXTRA_ACCOUNTS_JSON = JSON.stringify([
+    { name: "teacher2", passwordHash: await createTeacherPasswordHash(passwords[1]) },
+    { name: "teacher3", passwordHash: await createTeacherPasswordHash(passwords[2]) },
+  ]);
+  process.env.TEACHER_SESSION_SECRET = "m".repeat(43);
+  process.env.GOOGLE_SHEET_ID = "testspreadsheetid0123456789";
+  process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({ client_email: "robot@example.iam.gserviceaccount.com", private_key: "test" });
+  mock.method(JWT.prototype, "getAccessToken", async () => ({ token: "sheets-token" }));
+  globalThis.fetch = async (url) => {
+    const path = String(url);
+    if (path.includes("fields=sheets.properties")) return Response.json({ sheets: [{ properties: { title: "Students" } }] });
+    if (path.includes("A1%3AO1")) return Response.json({ values: [heading] });
+    if (path.includes("A2%3AO")) return Response.json({ values: [[userId, "LINE nickname", "ปวช.1/1", "", "", 1, "00", 0, 0, "", JSON.stringify(progress), "6802041510015", "สมชาย ใจดี", "12", "ปวช.1/1"]] });
+    throw new Error(`Unexpected request: ${path}`);
+  };
+  try {
+    const sessions = [];
+    for (const [index, name] of ["katawut", "teacher2", "teacher3"].entries()) {
+      const response = await loginApi.fetch(loginRequest(name, passwords[index]));
+      assert.equal(response.status, 200);
+      const login = await response.json();
+      assert.equal(login.teacher.name, name);
+      sessions.push(login.token);
+      const data = await teacherApi.fetch(request("GET", undefined, login.token));
+      assert.equal(data.status, 200);
+      assert.equal((await data.json()).students[0].fullName, "สมชาย ใจดี");
+    }
+    assert.equal((await loginApi.fetch(loginRequest("teacher2", passwords[2]))).status, 401);
+    const extras = JSON.parse(process.env.TEACHER_EXTRA_ACCOUNTS_JSON);
+    extras[0].passwordHash = await createTeacherPasswordHash("rotated-password");
+    process.env.TEACHER_EXTRA_ACCOUNTS_JSON = JSON.stringify(extras);
+    assert.equal(verifyTeacherSession(sessions[1]), null);
+    assert.equal(verifyTeacherSession(sessions[0])?.name, "katawut");
+    assert.equal(verifyTeacherSession(sessions[2])?.name, "teacher3");
+    process.env.TEACHER_EXTRA_ACCOUNTS_JSON = JSON.stringify([{ name: "KATAWUT", passwordHash: extras[0].passwordHash }]);
+    assert.equal(teacherAuthConfigured(), false);
+    assert.equal((await teacherApi.fetch(request())).status, 503);
   } finally {
     globalThis.fetch = originalFetch;
     mock.restoreAll();

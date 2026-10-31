@@ -52,6 +52,6 @@ export default {
       return json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, 401, cors ?? {});
     }
     attempts.delete(ip);
-    return json({ teacher, ...createTeacherSession() }, 200, cors ?? {});
+    return json({ teacher, ...createTeacherSession(teacher.name) }, 200, cors ?? {});
   },
 };
