@@ -22,7 +22,7 @@ export function teacherAuthConfigured() {
 }
 
 export async function createTeacherPasswordHash(password) {
-  if (typeof password !== "string" || password.length < 16 || password.length > 256) throw new Error("Password must be 16-256 characters");
+  if (typeof password !== "string" || password.length < 6 || password.length > 256) throw new Error("Password must be 6-256 characters");
   const salt = randomBytes(16).toString("hex");
   const hash = await scrypt(password, Buffer.from(salt, "hex"), 64, workFactor);
   return `scrypt$${workFactor.N}$${workFactor.r}$${workFactor.p}$${salt}$${hash.toString("hex")}`;

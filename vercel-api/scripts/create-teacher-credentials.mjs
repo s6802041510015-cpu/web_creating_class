@@ -28,7 +28,7 @@ function hiddenPrompt(label) {
 }
 
 try {
-  const password = await hiddenPrompt("รหัสผ่านครู (อย่างน้อย 16 ตัวอักษร; ขณะพิมพ์จะไม่แสดง): ");
+  const password = await hiddenPrompt("รหัสผ่านครู (อย่างน้อย 6 ตัวอักษร; ขณะพิมพ์จะไม่แสดง): ");
   const confirmation = await hiddenPrompt("พิมพ์รหัสผ่านอีกครั้ง: ");
   if (password !== confirmation) throw new Error("รหัสผ่านสองครั้งไม่ตรงกัน");
   const hash = await createTeacherPasswordHash(password);

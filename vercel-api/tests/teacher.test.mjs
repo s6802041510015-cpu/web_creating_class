@@ -25,6 +25,11 @@ test("teacher endpoints stay closed until password credentials are configured", 
   assert.equal((await loginApi.fetch(loginRequest("teacher", "any"))).status, 503);
 });
 
+test("teacher password setup accepts six characters and rejects shorter passwords", async () => {
+  await assert.rejects(createTeacherPasswordHash("12345"), /6-256/);
+  assert.match(await createTeacherPasswordHash("123456"), /^scrypt\$16384\$8\$5\$/);
+});
+
 test("teacher password login issues a signed short-lived session for student data", async () => {
   const keys = ["TEACHER_USERNAME", "TEACHER_PASSWORD_HASH", "TEACHER_SESSION_SECRET", "GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"];
   const savedEnv = Object.fromEntries(keys.map((key) => [key, process.env[key]]));

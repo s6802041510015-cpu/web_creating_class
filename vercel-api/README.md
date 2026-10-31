@@ -42,7 +42,7 @@ LINE Developers ต้องตั้ง LIFF Endpoint URL เป็น `https:/
 
 เว็บครูอยู่ที่ `https://s6802041510015-cpu.github.io/web_creating_class/teacher` และใช้บัญชีครูหนึ่งบัญชีแยกจาก LINE ของนักเรียน เว็บครูดูชื่อจริง รหัสนักเรียน เลขที่ คะแนน ความก้าวหน้า กรองห้อง ค้นหา และแก้ไขห้องได้ API ตรวจเซสชันที่ลงลายเซ็นก่อนอ่านหรือเขียนข้อมูลทุกคำขอ
 
-1. เปิด PowerShell ในโฟลเดอร์ `vercel-api` แล้วรัน `npm run teacher:credentials` พิมพ์รหัสผ่านที่เดายากอย่างน้อย 16 ตัวอักษรสองครั้ง ตัวอักษรจะไม่แสดงบนหน้าจอ คำสั่งจะแสดง `TEACHER_PASSWORD_HASH` และ `TEACHER_SESSION_SECRET` สำหรับคัดลอก ไม่เก็บรหัสผ่านลงไฟล์
+1. เปิด PowerShell ในโฟลเดอร์ `vercel-api` แล้วรัน `npm run teacher:credentials` พิมพ์รหัสผ่านอย่างน้อย 6 ตัวอักษรสองครั้ง ควรใช้รหัสที่ยาวและไม่ซ้ำกับที่อื่น ตัวอักษรจะไม่แสดงบนหน้าจอ คำสั่งจะแสดง `TEACHER_PASSWORD_HASH` และ `TEACHER_SESSION_SECRET` สำหรับคัดลอก ไม่เก็บรหัสผ่านลงไฟล์
 2. ใน Vercel project ของ API ไปที่ **Settings → Environment Variables** เพิ่มสำหรับ **Production**:
    - `TEACHER_USERNAME` = ชื่อผู้ใช้ที่ต้องการ เช่น `katawut` (Config)
    - `TEACHER_PASSWORD_HASH` = ค่าที่ได้จากคำสั่งข้อ 1 (Secret)
