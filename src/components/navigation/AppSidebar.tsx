@@ -39,7 +39,7 @@ export function AppSidebar() {
               : <UserRound size={19} aria-hidden="true" />}
           </span>
           <span>
-            <strong>{user?.fullName ?? user?.displayName ?? "ผู้เรียน WebQuest"}</strong>
+            <strong>{user?.fullName ?? user?.displayName ?? "ผู้เรียน WebHTML Class"}</strong>
             <small>{isDemo ? "โหมดทดลอง · ยังไม่เชื่อม LINE" : "เข้าสู่ระบบด้วย LINE"}</small>
           </span>
         </div>

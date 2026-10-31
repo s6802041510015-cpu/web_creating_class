@@ -130,7 +130,7 @@ export function LineAuthProvider({ children }: { children: ReactNode }) {
     <main className="line-auth">
       <section className="line-auth__card" aria-live="polite">
         <span className="line-auth__mark">W</span>
-        <p className="line-auth__eyebrow">WEBQUEST STUDIO</p>
+        <p className="line-auth__eyebrow">WEBHTML CLASS</p>
         <h1>เข้าสู่ระบบเพื่อเริ่มเรียน</h1>
         <p>ใช้บัญชี LINE ของคุณเพื่อเข้าสู่บทเรียนวิชา การสร้างเว็บไซต์</p>
         {status === "loading" && <div className="line-auth__status"><LoaderCircle className="line-auth__spinner" size={22} /> กำลังตรวจสอบการเข้าสู่ระบบ...</div>}

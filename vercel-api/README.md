@@ -1,4 +1,4 @@
-# WebQuest API และข้อมูลความก้าวหน้า
+# WebHTML Class API และข้อมูลความก้าวหน้า
 
 เว็บนักเรียนอยู่บน GitHub Pages ส่วน Vercel project นี้ (`vercel-api`) ให้บริการ `/api/chat`, `/api/auth/line`, `/api/student`, `/api/progress`, `/api/teacher/login` และ `/api/teacher` โดยตรวจ LINE ID token สำหรับนักเรียน และชื่อผู้ใช้ รหัสผ่าน พร้อมเซสชันสำหรับครู ก่อนอ่านหรือเขียนข้อมูล
 

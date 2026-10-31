@@ -1,4 +1,4 @@
-# WebQuest Studio
+# WebHTML Class
 
 เว็บเรียนรู้รายวิชา **การสร้างเว็บไซต์ (Website Creating)** สำหรับนักเรียน ปวช. 1 พัฒนาด้วย React, TypeScript, Vite, Tailwind CSS และ React Router
 

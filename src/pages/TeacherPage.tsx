@@ -247,7 +247,7 @@ export function TeacherPage() {
             <GraduationCap size={24} />
           </span>
           <div>
-            <strong>WEBQUEST STUDIO</strong>
+            <strong>WEBHTML CLASS</strong>
             <small>พื้นที่สำหรับคุณครู</small>
           </div>
         </div>
