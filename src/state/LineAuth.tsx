@@ -13,6 +13,8 @@ type LineAuthState = {
   getIdToken: () => Promise<string | null>;
 };
 
+class LineSessionExpiredError extends Error {}
+
 const getIdToken = async () => liffId ? (await initializeLiff()).getIDToken() : null;
 const LineAuthContext = createContext<LineAuthState>({ user: null, isDemo: true, getIdToken });
 const liffId = (import.meta.env.VITE_LIFF_ID ?? "").trim();
@@ -40,6 +42,9 @@ async function verifyUser(idToken: string, signal: AbortSignal): Promise<LineUse
     signal,
   });
   const result = await response.json().catch(() => null) as { user?: LineUser; error?: string } | null;
+  if (response.status === 401) {
+    throw new LineSessionExpiredError("เซสชัน LINE หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+  }
   if (!response.ok || !result?.user?.userId) {
     throw new Error(result?.error || "ยืนยันตัวตนกับ LINE ไม่สำเร็จ");
   }
@@ -56,6 +61,9 @@ async function studentRegistration(method: "GET" | "POST", input?: StudentRegist
     signal: signal ?? AbortSignal.timeout(20000),
   });
   const result = await response.json().catch(() => null) as { registration?: StudentRegistration | null; error?: string } | null;
+  if (response.status === 401) {
+    throw new LineSessionExpiredError("เซสชัน LINE หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+  }
   if (!response.ok) throw new Error(result?.error || "เชื่อมต่อข้อมูลนักเรียนไม่ได้");
   return result?.registration ?? null;
 }
@@ -67,7 +75,7 @@ export function useLineAuth() {
 export function LineAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<LineUser | null>(null);
   const [pendingUser, setPendingUser] = useState<LineUser | null>(null);
-  const [status, setStatus] = useState<"loading" | "login" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "login" | "error" | "reopen">("loading");
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
 
@@ -78,9 +86,10 @@ export function LineAuthProvider({ children }: { children: ReactNode }) {
     setError("");
     setPendingUser(null);
     void (async () => {
+      let sdk: typeof liff | null = null;
       try {
         if (!apiOrigin) throw new Error("ยังไม่ได้ตั้งค่า VITE_AI_API_URL สำหรับ API ยืนยันตัวตน");
-        const sdk = await initializeLiff();
+        sdk = await initializeLiff();
         if (controller.signal.aborted) return;
         if (!sdk.isLoggedIn()) {
           if (sdk.isInClient()) throw new Error("LINE ยังไม่เข้าสู่ระบบ กรุณาปิดหน้านี้แล้วเปิดจากเมนู LINE อีกครั้ง");
@@ -104,6 +113,17 @@ export function LineAuthProvider({ children }: { children: ReactNode }) {
         }).catch(() => {});
       } catch (cause) {
         if (controller.signal.aborted) return;
+        if (cause instanceof LineSessionExpiredError && sdk) {
+          if (sdk.isInClient()) {
+            setError("เซสชัน LINE หมดอายุ กรุณาปิดหน้านี้แล้วเปิดเว็บเรียนจาก LINE อีกครั้ง");
+            setStatus("reopen");
+          } else {
+            sdk.logout();
+            setError("เซสชัน LINE หมดอายุ กดเข้าสู่ระบบด้วย LINE อีกครั้ง");
+            setStatus("login");
+          }
+          return;
+        }
         setError(cause instanceof Error ? cause.message : "เชื่อมต่อ LINE ไม่สำเร็จ");
         setStatus("error");
       }
@@ -135,13 +155,20 @@ export function LineAuthProvider({ children }: { children: ReactNode }) {
         <p>ใช้บัญชี LINE ของคุณเพื่อเข้าสู่บทเรียนวิชา การสร้างเว็บไซต์</p>
         {status === "loading" && <div className="line-auth__status"><LoaderCircle className="line-auth__spinner" size={22} /> กำลังตรวจสอบการเข้าสู่ระบบ...</div>}
         {status === "login" && (
+          <>
+          {error && <p className="line-auth__error" role="alert">{error}</p>}
           <button className="line-auth__button" type="button" onClick={() => {
             void initializeLiff().then((sdk) => sdk.login({ redirectUri: window.location.href })).catch((cause: unknown) => {
               setError(cause instanceof Error ? cause.message : "เปิด LINE Login ไม่สำเร็จ");
               setStatus("error");
             });
           }}><LogIn size={20} /> เข้าสู่ระบบด้วย LINE</button>
+          </>
         )}
+        {status === "reopen" && <>
+          <p className="line-auth__error" role="alert">{error}</p>
+          <a className="line-auth__button" href={`https://liff.line.me/${liffId}`}><RefreshCw size={19} /> เปิดเว็บเรียนผ่าน LINE อีกครั้ง</a>
+        </>}
         {status === "error" && <>
           <p className="line-auth__error" role="alert">{error}</p>
           <button className="line-auth__button" type="button" onClick={() => setAttempt((value) => value + 1)}><RefreshCw size={19} /> ลองอีกครั้ง</button>

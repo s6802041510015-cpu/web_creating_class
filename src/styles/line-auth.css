@@ -41,6 +41,7 @@
   background: linear-gradient(120deg, var(--purple), var(--blue));
   color: white;
   font-weight: 700;
+  text-decoration: none;
   transition: transform .2s ease, filter .2s ease;
 }
 .line-auth__button:hover { filter: brightness(1.14); transform: translateY(-2px); }
