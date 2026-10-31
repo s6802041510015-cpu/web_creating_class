@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   BookOpenCheck,
   ClipboardCheck,
+  ExternalLink,
   GraduationCap,
   RefreshCw,
   Search,
@@ -40,6 +41,7 @@ export function TeacherPage() {
   const [token, setToken] = useState("");
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  const [sheetUrl, setSheetUrl] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [draftClasses, setDraftClasses] = useState<Record<string, string>>({});
@@ -86,6 +88,7 @@ export function TeacherPage() {
     const result = (await response.json().catch(() => null)) as {
       teacher?: Teacher;
       students?: Student[];
+      sheetUrl?: string;
       error?: string;
     } | null;
     if (response.status === 401) {
@@ -93,12 +96,14 @@ export function TeacherPage() {
       setToken("");
       setTeacher(null);
       setStudents([]);
+      setSheetUrl("");
     }
     if (!response.ok)
       throw new Error(result?.error || "โหลดข้อมูลนักเรียนไม่ได้");
     if (sessionRef.current !== idToken) return;
     setTeacher(result?.teacher ?? null);
     setStudents(result?.students ?? []);
+    setSheetUrl(result?.sheetUrl ?? "");
   }, []);
 
   useEffect(() => {
@@ -198,6 +203,7 @@ export function TeacherPage() {
     setPassword("");
     setTeacher(null);
     setStudents([]);
+    setSheetUrl("");
     setError("");
   }
 
@@ -289,25 +295,37 @@ export function TeacherPage() {
                   <strong>{teacher?.name || "กำลังตรวจสอบ..."}</strong>
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setLoading(true);
-                  setError("");
-                  void loadStudents(token)
-                    .catch((cause) =>
-                      setError(
-                        cause instanceof Error
-                          ? cause.message
-                          : "โหลดข้อมูลนักเรียนไม่ได้",
-                      ),
-                    )
-                    .finally(() => setLoading(false));
-                }}
-                disabled={loading}
-              >
-                <RefreshCw size={17} /> รีเฟรช
-              </button>
+              <div className="teacher-toolbar__actions">
+                {sheetUrl && (
+                  <a
+                    href={sheetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="teacher-toolbar__sheet"
+                  >
+                    <ExternalLink size={17} /> เปิด Google Sheet
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoading(true);
+                    setError("");
+                    void loadStudents(token)
+                      .catch((cause) =>
+                        setError(
+                          cause instanceof Error
+                            ? cause.message
+                            : "โหลดข้อมูลนักเรียนไม่ได้",
+                        ),
+                      )
+                      .finally(() => setLoading(false));
+                  }}
+                  disabled={loading}
+                >
+                  <RefreshCw size={17} /> รีเฟรช
+                </button>
+              </div>
             </div>
             {error && (
               <p className="teacher-error" role="alert">

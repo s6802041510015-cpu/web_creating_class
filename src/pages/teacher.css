@@ -156,7 +156,14 @@
 .teacher-toolbar small {
   display: block;
 }
-.teacher-toolbar button {
+.teacher-toolbar__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.teacher-toolbar button,
+.teacher-toolbar__sheet {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -165,6 +172,14 @@
   padding: 9px 15px;
   background: var(--surface);
   color: var(--text-primary);
+}
+.teacher-toolbar__sheet:hover {
+  border-color: var(--blue-light);
+  color: var(--text-primary);
+}
+.teacher-toolbar__sheet {
+  text-decoration: none;
+  white-space: nowrap;
 }
 .teacher-toolbar button:disabled {
   opacity: 0.5;
@@ -351,6 +366,10 @@ html[data-theme="light"] .teacher-error {
   }
 }
 @media (max-width: 560px) {
+  .teacher-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
   .teacher-header {
     padding: 0 14px;
   }

@@ -58,6 +58,7 @@ export default {
           {
             teacher,
             students: await listStudents(),
+            sheetUrl: `https://docs.google.com/spreadsheets/d/${encodeURIComponent(process.env.GOOGLE_SHEET_ID.trim())}/edit`,
           },
           200,
           cors ?? {},

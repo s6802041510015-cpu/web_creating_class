@@ -68,6 +68,7 @@ test("teacher password login issues a signed short-lived session for student dat
     assert.equal(listResponse.status, 200);
     const list = await listResponse.json();
     assert.equal(list.teacher.name, "Katawut");
+    assert.equal(list.sheetUrl, "https://docs.google.com/spreadsheets/d/testspreadsheetid0123456789/edit");
     assert.equal(list.students[0].fullName, "สมชาย ใจดี");
     assert.equal(list.students[0].studentId, "6802041510015");
     assert.deepEqual(list.students[0].progress, progress);
