@@ -1,4 +1,5 @@
 import { JWT } from "google-auth-library";
+import { createHash } from "node:crypto";
 import { emptyProgress, normalizeProgress } from "./progress-schema.mjs";
 
 const tab = "Students";
@@ -206,4 +207,51 @@ export async function updateStudentClass(userId, className) {
     body: JSON.stringify({ range: `'${tab}'!C${rowNumber}`, majorDimension: "ROWS", values: [[className]] }),
   });
   return true;
+}
+
+export async function createClassSheet(className) {
+  const name = typeof className === "string" ? className.trim() : "";
+  if (!name || name.length > 50 || /[\x00-\x1f\x7f]/.test(name)) throw new Error("INVALID_CLASS_NAME");
+  const all = await rows();
+  if (!all.some((row) => String(row[2] ?? "").trim() === name)) return null;
+
+  const safeName = name.replace(/[\\/?*\[\]:'"]/g, "-").replace(/\s+/g, " ").slice(0, 65);
+  const suffix = createHash("sha256").update(name).digest("hex").slice(0, 8);
+  const title = `ห้อง ${safeName}-${suffix}`;
+  const findTab = async () => (await sheets("?fields=sheets.properties"))
+    .sheets?.find((sheet) => sheet.properties?.title === title)?.properties;
+
+  let properties = await findTab();
+  const created = !properties;
+  if (!properties) {
+    try {
+      const added = await sheets(":batchUpdate", {
+        method: "POST",
+        body: JSON.stringify({ requests: [{ addSheet: { properties: {
+          title,
+          gridProperties: { rowCount: 2000, columnCount: headers.length, frozenRowCount: 1 },
+        } } }] }),
+      });
+      properties = added.replies?.[0]?.addSheet?.properties ?? await findTab();
+    } catch (error) {
+      // Another request may have created the tab at the same time.
+      properties = await findTab();
+      if (!properties) throw error;
+    }
+  }
+  if (!Number.isInteger(properties?.sheetId)) throw new Error("Class sheet ID unavailable");
+
+  const formula = `=IFNA(FILTER(Students!A2:O,Students!C2:C="${name.replace(/"/g, '""')}"),"")`;
+  await sheets("/values:batchUpdate", {
+    method: "POST",
+    body: JSON.stringify({ valueInputOption: "USER_ENTERED", data: [
+      { range: `'${title}'!A1:O1`, majorDimension: "ROWS", values: [headers] },
+      { range: `'${title}'!A2`, majorDimension: "ROWS", values: [[formula]] },
+    ] }),
+  });
+  return {
+    title,
+    url: `https://docs.google.com/spreadsheets/d/${spreadsheetId()}/edit#gid=${properties.sheetId}`,
+    created,
+  };
 }

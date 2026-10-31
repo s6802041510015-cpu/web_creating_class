@@ -5,6 +5,7 @@ import {
   BookOpenCheck,
   ClipboardCheck,
   ExternalLink,
+  FileSpreadsheet,
   GraduationCap,
   RefreshCw,
   Search,
@@ -43,6 +44,8 @@ export function TeacherPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [sheetUrl, setSheetUrl] = useState("");
   const [classFilter, setClassFilter] = useState("all");
+  const [classSheetLinks, setClassSheetLinks] = useState<Record<string, string>>({});
+  const [creatingClass, setCreatingClass] = useState("");
   const [query, setQuery] = useState("");
   const [draftClasses, setDraftClasses] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState("");
@@ -97,6 +100,7 @@ export function TeacherPage() {
       setTeacher(null);
       setStudents([]);
       setSheetUrl("");
+      setClassSheetLinks({});
     }
     if (!response.ok)
       throw new Error(result?.error || "โหลดข้อมูลนักเรียนไม่ได้");
@@ -197,6 +201,33 @@ export function TeacherPage() {
     }
   }
 
+  async function createSheetForClass(className: string) {
+    if (!className || className === "all" || className === "unassigned" || creatingClass) return;
+    setCreatingClass(className);
+    setError("");
+    try {
+      const response = await fetch(`${apiOrigin}/api/teacher`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "createClassSheet", className }),
+        signal: AbortSignal.timeout(40000),
+      });
+      const result = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
+      if (response.status === 401) signOut();
+      const url = result?.url;
+      if (!response.ok || !url)
+        throw new Error(result?.error || "สร้างแท็บห้องเรียนไม่ได้");
+      setClassSheetLinks((current) => ({ ...current, [className]: url }));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "สร้างแท็บห้องเรียนไม่ได้");
+    } finally {
+      setCreatingClass("");
+    }
+  }
+
   function signOut() {
     sessionRef.current = "";
     setToken("");
@@ -204,6 +235,7 @@ export function TeacherPage() {
     setTeacher(null);
     setStudents([]);
     setSheetUrl("");
+    setClassSheetLinks({});
     setError("");
   }
 
@@ -388,6 +420,28 @@ export function TeacherPage() {
                           </option>
                         ))}
                       </select>
+                      {classFilter !== "all" && classFilter !== "unassigned" && (
+                        classSheetLinks[classFilter] ? (
+                          <a
+                            className="teacher-filters__sheet"
+                            href={classSheetLinks[classFilter]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink size={16} /> เปิดแท็บห้องนี้
+                          </a>
+                        ) : (
+                          <button
+                            className="teacher-filters__sheet"
+                            type="button"
+                            onClick={() => void createSheetForClass(classFilter)}
+                            disabled={Boolean(creatingClass)}
+                          >
+                            <FileSpreadsheet size={16} />
+                            {creatingClass === classFilter ? "กำลังสร้างแท็บ..." : "สร้างแท็บห้องนี้"}
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                   {loading ? (

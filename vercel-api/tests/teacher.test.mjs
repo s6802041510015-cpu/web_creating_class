@@ -42,12 +42,25 @@ test("teacher password login issues a signed short-lived session for student dat
   process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({ client_email: "robot@example.iam.gserviceaccount.com", private_key: "test" });
   mock.method(JWT.prototype, "getAccessToken", async () => ({ token: "sheets-token" }));
   const rows = [[userId, "LINE nickname", "ปวช.1/1", "", "", 1, "00", 0, 0, "2026-10-29T00:00:00.000Z", JSON.stringify(progress), "6802041510015", "สมชาย ใจดี", "12", "ปวช.1/1"]];
+  const tabs = [{ properties: { title: "Students", sheetId: 0 } }];
   let classWrite;
+  let classSheetWrite;
+  let addCount = 0;
   globalThis.fetch = async (url, options = {}) => {
     const path = String(url);
-    if (path.includes("fields=sheets.properties.title")) return Response.json({ sheets: [{ properties: { title: "Students" } }] });
+    if (path.includes("fields=sheets.properties")) return Response.json({ sheets: tabs });
     if (path.includes("A1%3AO1")) return Response.json({ values: [heading] });
     if (path.includes("A2%3AO")) return Response.json({ values: rows });
+    if (options.method === "POST" && path.includes("/values:batchUpdate")) {
+      classSheetWrite = JSON.parse(options.body);
+      return Response.json({ totalUpdatedRows: 2 });
+    }
+    if (options.method === "POST" && path.endsWith(":batchUpdate")) {
+      const title = JSON.parse(options.body).requests[0].addSheet.properties.title;
+      const properties = { title, sheetId: 70 + ++addCount };
+      tabs.push({ properties });
+      return Response.json({ replies: [{ addSheet: { properties } }] });
+    }
     if (options.method === "PUT") { classWrite = JSON.parse(options.body); return Response.json({ updatedRows: 1 }); }
     throw new Error(`Unexpected request: ${path}`);
   };
@@ -72,6 +85,24 @@ test("teacher password login issues a signed short-lived session for student dat
     assert.equal(list.students[0].fullName, "สมชาย ใจดี");
     assert.equal(list.students[0].studentId, "6802041510015");
     assert.deepEqual(list.students[0].progress, progress);
+    assert.equal((await teacherApi.fetch(request("POST", { action: "createClassSheet", className: "ปวช.1/1" }))).status, 401);
+    assert.equal((await teacherApi.fetch(request("POST", { action: "createClassSheet", className: "ไม่มีห้องนี้" }, login.token))).status, 404);
+    const createdResponse = await teacherApi.fetch(request("POST", { action: "createClassSheet", className: "ปวช.1/1" }, login.token));
+    assert.equal(createdResponse.status, 200);
+    const created = await createdResponse.json();
+    assert.equal(created.created, true);
+    assert.equal(created.url, "https://docs.google.com/spreadsheets/d/testspreadsheetid0123456789/edit#gid=71");
+    assert.equal(created.title.includes("/"), false);
+    assert.equal(classSheetWrite.valueInputOption, "USER_ENTERED");
+    assert.equal(classSheetWrite.data[1].values[0][0], '=IFNA(FILTER(Students!A2:O,Students!C2:C="ปวช.1/1"),"")');
+    const existing = await teacherApi.fetch(request("POST", { action: "createClassSheet", className: "ปวช.1/1" }, login.token));
+    assert.equal((await existing.json()).created, false);
+    assert.equal(addCount, 1);
+    rows[0][2] = 'A"B';
+    const quoted = await teacherApi.fetch(request("POST", { action: "createClassSheet", className: 'A"B' }, login.token));
+    assert.equal(quoted.status, 200);
+    assert.equal(classSheetWrite.data[1].values[0][0], '=IFNA(FILTER(Students!A2:O,Students!C2:C="A""B"),"")');
+    rows[0][2] = "ปวช.1/1";
     assert.equal((await teacherApi.fetch(request("PUT", { userId, className: "ปวช.2/1" }, login.token))).status, 200);
     assert.equal(classWrite.range, "'Students'!C2");
     assert.deepEqual(classWrite.values, [["ปวช.2/1"]]);

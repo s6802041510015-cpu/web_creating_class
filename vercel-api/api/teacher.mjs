@@ -1,5 +1,5 @@
 import { teacherAuthConfigured, verifyTeacherSession } from "../lib/teacher-auth.mjs";
-import { listStudents, updateStudentClass } from "../lib/google-sheets.mjs";
+import { createClassSheet, listStudents, updateStudentClass } from "../lib/google-sheets.mjs";
 
 const defaultOrigins = ["https://s6802041510015-cpu.github.io"];
 function corsHeaders(origin) {
@@ -15,7 +15,7 @@ function corsHeaders(origin) {
   return allowed
     ? {
         "Access-Control-Allow-Origin": origin,
-        "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
         "Access-Control-Allow-Headers": "Authorization, Content-Type",
         Vary: "Origin",
       }
@@ -36,8 +36,8 @@ export default {
       return json({ error: "ไม่อนุญาตให้เว็บไซต์นี้เรียก API" }, 403);
     if (request.method === "OPTIONS")
       return new Response(null, { status: 204, headers: cors ?? {} });
-    if (request.method !== "GET" && request.method !== "PUT")
-      return json({ error: "ใช้ GET หรือ PUT เท่านั้น" }, 405, cors ?? {});
+    if (request.method !== "GET" && request.method !== "PUT" && request.method !== "POST")
+      return json({ error: "ใช้ GET, POST หรือ PUT เท่านั้น" }, 405, cors ?? {});
     if (!teacherAuthConfigured())
       return json({ error: "ยังไม่ได้ตั้งค่าบัญชีครู" }, 503, cors ?? {});
     const token = /^Bearer (\S+)$/i.exec(
@@ -73,6 +73,14 @@ export default {
         input = JSON.parse(raw);
       } catch {
         return json({ error: "ข้อมูลไม่ถูกต้อง" }, 400, cors ?? {});
+      }
+      if (request.method === "POST") {
+        if (input?.action !== "createClassSheet" || typeof input.className !== "string" ||
+            !input.className.trim() || input.className.length > 50 || /[\x00-\x1f\x7f]/.test(input.className))
+          return json({ error: "ชื่อห้องเรียนไม่ถูกต้อง" }, 400, cors ?? {});
+        const classSheet = await createClassSheet(input.className);
+        if (!classSheet) return json({ error: "ไม่พบห้องเรียนนี้" }, 404, cors ?? {});
+        return json(classSheet, 200, cors ?? {});
       }
       const userId =
         typeof input?.userId === "string" ? input.userId.trim() : "";
