@@ -227,7 +227,7 @@ export default function App() {
         )}
 
         {(auth === "ready" || auth === "demo") && <>
-          {auth === "demo" && <div className="demo-banner"><Info size={18} /> โหมดดูตัวอย่างในเครื่อง · ตั้งค่า LIFF ID และ API ก่อนส่งคำขอจริง</div>}
+          {auth === "demo" && <div className="demo-banner"><Info size={18} /> โหมดตัวอย่าง · ตั้งค่า LIFF ID และ API ก่อนส่งคำขอจริง</div>}
           <div className="topline"><span>บริการนักเรียน <ChevronRight size={14} /> ระบบแจ้งลาเรียน</span><span>WEBHTML CLASS</span></div>
           {view === "home" && <>
             <section className="hero">

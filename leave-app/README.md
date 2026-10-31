@@ -2,6 +2,8 @@
 
 เว็บแจ้งลาเรียนแยกจากเว็บบทเรียน ใช้ LINE Login channel เดิม แต่สร้าง LIFF app ใหม่ที่มี Endpoint เป็น URL เว็บนี้
 
+โดเมน Production: https://webhtml-leave.vercel.app/
+
 ## พัฒนาในเครื่อง
 
 ```bash
