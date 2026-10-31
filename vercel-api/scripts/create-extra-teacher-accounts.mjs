@@ -39,9 +39,11 @@ function prompt(label, hidden = false) {
 
 try {
   const accounts = [];
-  process.stdout.write("สร้างบัญชีครูเพิ่ม 2 คน (ชื่อผู้ใช้ห้ามซ้ำกับบัญชีเดิม)\n");
-  for (let index = 1; index <= 2; index += 1) {
-    const name = (await prompt(`ชื่อผู้ใช้ครูคนใหม่ที่ ${index}: `)).trim();
+  const single = process.argv.includes("--single");
+  const count = single ? 1 : 2;
+  process.stdout.write(`สร้างบัญชีครูเพิ่ม ${count} คน (ชื่อผู้ใช้ห้ามซ้ำกับบัญชีเดิม)\n`);
+  for (let index = 1; index <= count; index += 1) {
+    const name = (await prompt(single ? "ชื่อผู้ใช้ครูคนที่ 4: " : `ชื่อผู้ใช้ครูคนใหม่ที่ ${index}: `)).trim();
     const normalized = name.normalize("NFKC").toLowerCase();
     if (!name || name.length > 100 || /[\x00-\x1f\x7f]/.test(name) || accounts.some((entry) => entry.name.normalize("NFKC").toLowerCase() === normalized)) {
       throw new Error("ชื่อผู้ใช้ไม่ถูกต้องหรือซ้ำกัน");
@@ -52,7 +54,8 @@ try {
     accounts.push({ name, passwordHash: await createTeacherPasswordHash(password) });
   }
   process.stdout.write("\nคัดลอกเฉพาะค่าหลังเครื่องหมาย = ไปใส่ Vercel Production Secret (ไม่ต้องส่งในแชท):\n");
-  process.stdout.write(`TEACHER_EXTRA_ACCOUNTS_JSON=${JSON.stringify(accounts)}\n`);
+  if (single) process.stdout.write(`TEACHER_ACCOUNT_4_JSON=${JSON.stringify(accounts[0])}\n`);
+  else process.stdout.write(`TEACHER_EXTRA_ACCOUNTS_JSON=${JSON.stringify(accounts)}\n`);
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.message : "สร้างบัญชีไม่สำเร็จ"}\n`);
   process.exitCode = 1;

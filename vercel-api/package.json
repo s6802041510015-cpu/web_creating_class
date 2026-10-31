@@ -5,7 +5,8 @@
   "scripts": {
     "test": "node --test",
     "teacher:credentials": "node scripts/create-teacher-credentials.mjs",
-    "teacher:extra-accounts": "node scripts/create-extra-teacher-accounts.mjs"
+    "teacher:extra-accounts": "node scripts/create-extra-teacher-accounts.mjs",
+    "teacher:add-account": "node scripts/create-extra-teacher-accounts.mjs --single"
   },
   "dependencies": {
     "google-auth-library": "^11.3.2"

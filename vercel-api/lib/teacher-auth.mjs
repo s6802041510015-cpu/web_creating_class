@@ -35,6 +35,12 @@ function configuredAccounts() {
     accounts.push(...extras);
   }
 
+  const fourthAccount = process.env.TEACHER_ACCOUNT_4_JSON?.trim();
+  if (fourthAccount) {
+    try { accounts.push(JSON.parse(fourthAccount)); }
+    catch { return null; }
+  }
+
   if (accounts.length === 0) return null;
   const seen = new Set();
   const configured = [];

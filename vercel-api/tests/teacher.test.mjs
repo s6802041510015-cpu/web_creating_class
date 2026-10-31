@@ -31,13 +31,14 @@ test("teacher password setup accepts six characters and rejects shorter password
 });
 
 test("teacher password login issues a signed short-lived session for student data", async () => {
-  const keys = ["TEACHER_USERNAME", "TEACHER_PASSWORD_HASH", "TEACHER_EXTRA_ACCOUNTS_JSON", "TEACHER_SESSION_SECRET", "GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"];
+  const keys = ["TEACHER_USERNAME", "TEACHER_PASSWORD_HASH", "TEACHER_EXTRA_ACCOUNTS_JSON", "TEACHER_ACCOUNT_4_JSON", "TEACHER_SESSION_SECRET", "GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"];
   const savedEnv = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   const originalFetch = globalThis.fetch;
   const password = "correct-horse-battery-staple";
   process.env.TEACHER_USERNAME = "Katawut";
   process.env.TEACHER_PASSWORD_HASH = await createTeacherPasswordHash(password);
   delete process.env.TEACHER_EXTRA_ACCOUNTS_JSON;
+  delete process.env.TEACHER_ACCOUNT_4_JSON;
   process.env.TEACHER_SESSION_SECRET = "s".repeat(43);
   process.env.GOOGLE_SHEET_ID = "testspreadsheetid0123456789";
   process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({ client_email: "robot@example.iam.gserviceaccount.com", private_key: "test" });
@@ -118,17 +119,18 @@ test("teacher password login issues a signed short-lived session for student dat
   }
 });
 
-test("three teacher accounts see the same students with independent sessions", async () => {
-  const keys = ["TEACHER_USERNAME", "TEACHER_PASSWORD_HASH", "TEACHER_EXTRA_ACCOUNTS_JSON", "TEACHER_SESSION_SECRET", "GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"];
+test("four teacher accounts see the same students with independent sessions", async () => {
+  const keys = ["TEACHER_USERNAME", "TEACHER_PASSWORD_HASH", "TEACHER_EXTRA_ACCOUNTS_JSON", "TEACHER_ACCOUNT_4_JSON", "TEACHER_SESSION_SECRET", "GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_JSON"];
   const savedEnv = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   const originalFetch = globalThis.fetch;
-  const passwords = ["primary-password", "second-password", "third-password"];
+  const passwords = ["primary-password", "second-password", "third-password", "fourth-password"];
   process.env.TEACHER_USERNAME = "katawut";
   process.env.TEACHER_PASSWORD_HASH = await createTeacherPasswordHash(passwords[0]);
   process.env.TEACHER_EXTRA_ACCOUNTS_JSON = JSON.stringify([
     { name: "teacher2", passwordHash: await createTeacherPasswordHash(passwords[1]) },
     { name: "teacher3", passwordHash: await createTeacherPasswordHash(passwords[2]) },
   ]);
+  process.env.TEACHER_ACCOUNT_4_JSON = JSON.stringify({ name: "teacher4", passwordHash: await createTeacherPasswordHash(passwords[3]) });
   process.env.TEACHER_SESSION_SECRET = "m".repeat(43);
   process.env.GOOGLE_SHEET_ID = "testspreadsheetid0123456789";
   process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({ client_email: "robot@example.iam.gserviceaccount.com", private_key: "test" });
@@ -142,7 +144,7 @@ test("three teacher accounts see the same students with independent sessions", a
   };
   try {
     const sessions = [];
-    for (const [index, name] of ["katawut", "teacher2", "teacher3"].entries()) {
+    for (const [index, name] of ["katawut", "teacher2", "teacher3", "teacher4"].entries()) {
       const response = await loginApi.fetch(loginRequest(name, passwords[index]));
       assert.equal(response.status, 200);
       const login = await response.json();
@@ -157,6 +159,11 @@ test("three teacher accounts see the same students with independent sessions", a
     extras[0].passwordHash = await createTeacherPasswordHash("rotated-password");
     process.env.TEACHER_EXTRA_ACCOUNTS_JSON = JSON.stringify(extras);
     assert.equal(verifyTeacherSession(sessions[1]), null);
+    assert.equal(verifyTeacherSession(sessions[0])?.name, "katawut");
+    assert.equal(verifyTeacherSession(sessions[2])?.name, "teacher3");
+    assert.equal(verifyTeacherSession(sessions[3])?.name, "teacher4");
+    process.env.TEACHER_ACCOUNT_4_JSON = JSON.stringify({ name: "teacher4", passwordHash: await createTeacherPasswordHash("rotated-fourth") });
+    assert.equal(verifyTeacherSession(sessions[3]), null);
     assert.equal(verifyTeacherSession(sessions[0])?.name, "katawut");
     assert.equal(verifyTeacherSession(sessions[2])?.name, "teacher3");
     process.env.TEACHER_EXTRA_ACCOUNTS_JSON = JSON.stringify([{ name: "KATAWUT", passwordHash: extras[0].passwordHash }]);
