@@ -2,6 +2,8 @@
 
 เว็บเรียนรู้รายวิชา **การสร้างเว็บไซต์ (Website Creating)** สำหรับนักเรียน ปวช. 1 พัฒนาด้วย React, TypeScript, Vite, Tailwind CSS และ React Router
 
+คู่มือสำหรับนักเรียนและครู: [อ่านออนไลน์](docs/user-guide.md) · [ดาวน์โหลด PDF](output/pdf/WebHTML-Class-User-Guide.pdf)
+
 ## เริ่มใช้งาน
 
 ```bash
